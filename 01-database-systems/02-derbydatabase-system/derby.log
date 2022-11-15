@@ -1,0 +1,19 @@
+----------------------------------------------------------------
+Mon Nov 14 06:58:49 JST 2022:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.16.1.1 - (1901046): instance a816c00e-0184-7300-9699-00000f62aef8 
+on database directory /Users/m.naka/repos/nakamasato/database-design-and-implementation/firstdb with class loader jdk.internal.loader.ClassLoaders$AppClassLoader@5b37e0d2 
+Loaded from file:/Users/m.naka/Downloads/db-derby-10.16.1.1-bin/lib/derby.jar
+java.vendor=Homebrew
+java.runtime.version=19.0.1
+user.dir=/Users/m.naka/repos/nakamasato/database-design-and-implementation
+os.name=Mac OS X
+os.arch=aarch64
+os.version=12.6
+derby.system.home=null
+Database Class Loader started - derby.database.classpath=''
+----------------------------------------------------------------
+Mon Nov 14 07:01:28 JST 2022: Shutting down Derby engine
+----------------------------------------------------------------
+Mon Nov 14 07:01:28 JST 2022:
+Shutting down instance a816c00e-0184-7300-9699-00000f62aef8 on database directory /Users/m.naka/repos/nakamasato/database-design-and-implementation/firstdb with class loader jdk.internal.loader.ClassLoaders$AppClassLoader@5b37e0d2 
+----------------------------------------------------------------
