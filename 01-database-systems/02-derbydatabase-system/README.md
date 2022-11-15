@@ -18,7 +18,7 @@
     ij> CONNECT 'jdbc:derby:firstdb;create=true';
     ```
 
-    Datbase files will be created under `firstdb`:
+    Check `derby.log` and `firstdb` dir:
 
     ```
     firstdb
@@ -38,4 +38,8 @@
     SELECT * FROM FIRSTTABLE;
     SELECT * FROM FIRSTTABLE WHERE ID=20;
     ```
-
+1. Disconnect
+    ```sql
+    disconnect;
+    exit;
+    ```
