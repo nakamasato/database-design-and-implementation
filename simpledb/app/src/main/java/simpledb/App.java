@@ -3,17 +3,12 @@
  */
 package simpledb;
 
-import java.io.File;
-
-import simpledb.file.FileMgr;
-
 public class App {
+    public String getGreeting() {
+        return "Hello World!";
+    }
 
     public static void main(String[] args) {
-        File dbDirectory = new File("datadir");
-        FileMgr fm = new FileMgr(dbDirectory, 400);
-        String filename = "test.txt";
-        fm.write(filename);
-        fm.read(filename);
+        System.out.println(new App().getGreeting());
     }
 }
