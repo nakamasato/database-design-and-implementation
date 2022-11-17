@@ -18,8 +18,8 @@ jobs:
 
       - name: setup gradle
         uses: gradle/gradle-build-action@v2
-        with:
-          gradle-version: 7.5
+        # with:
+        #   gradle-version: 7.5
 
       - name: test
         working-directory: simpledb
