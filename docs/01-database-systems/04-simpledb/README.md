@@ -41,4 +41,7 @@ Open the `SimpleDB_3.4` folder with vscode.
     jdbc:simpledb://localhost/test_db
     ```
 
-### 
+## References
+
+1. https://github.com/SixingYan/SimpleDB_3.00
+1. https://github.com/chaoyangnz/simpledb
