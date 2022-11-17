@@ -1,0 +1,26 @@
+name: test
+
+on:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: setup java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '19'
+          cache: 'gradle'
+
+      - name: setup gradle
+        uses: gradle/gradle-build-action@v2
+        with:
+          gradle-version: 7.5
+
+      - name: test
+        working-directory: simpledb
+        run: ./gradlew test
