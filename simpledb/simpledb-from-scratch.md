@@ -76,6 +76,8 @@ Bundle the app
 
 Database needs to write/read data to disk.
 
+File <-> FileMgr <-> ByteBuffer
+
 1. Create `FileMgr.java`
 
     ```java
@@ -211,3 +213,132 @@ Database needs to write/read data to disk.
 
     0 directories, 1 file
     ```
+
+### 2.2. Write/Read `Page` <-> File
+
+File <-> FileMgr <-> Page(ButeBuffer)
+
+`Page`: A container to wrap a `ByteBuffer` and responsible read and write `ByteBuffer` with `offset`. A page is initialized with the specified blocksize.
+
+
+1. Create `Page` class.
+
+    ```java
+    package simpledb.file;
+
+    import java.nio.ByteBuffer;
+    import java.nio.charset.Charset;
+    import java.nio.charset.StandardCharsets;
+
+    public class Page {
+      private ByteBuffer bb;
+      public static Charset CHARSET = StandardCharsets.US_ASCII;
+
+      public Page(int blocksize) {
+        bb = ByteBuffer.allocateDirect(blocksize);
+      }
+
+      public int getInt(int offset) {
+        return bb.getInt(offset);
+      }
+
+      public void setInt(int offset, int n) {
+        bb.putInt(offset, n);
+      }
+
+      public byte[] getBytes(int offset) {
+        bb.position(offset);
+        int length = bb.getInt();
+        byte[] b = new byte[length];
+        bb.get(b);
+        return b;
+      }
+
+      public void setBytes(int offset, byte[] b) {
+        bb.position(offset);
+        bb.putInt(b.length);
+        bb.put(b);
+      }
+
+      public String getString(int offset) {
+        byte[] b = getBytes(offset);
+        return new String(b, CHARSET);
+      }
+
+      public void setString(int offset, String s) {
+        byte[] b = s.getBytes(CHARSET);
+        setBytes(offset, b);
+      }
+
+      public static int maxLength(int strlen) {
+        float bytesPerChar = CHARSET.newEncoder().maxBytesPerChar();
+        return Integer.BYTES + (strlen & (int) bytesPerChar);
+      }
+
+      ByteBuffer contents() {
+        bb.position(0);
+        return bb;
+      }
+    }
+    ```
+
+1. `FileMgr.read` and `FileMgr.write` just receive `filename` and `page`. So file manager interact with them in between.
+
+    File <--  FileMgr --> Page
+
+    read:
+    ```java
+      public synchronized void read(String filename, Page p) {
+        try {
+          RandomAccessFile f = getFile(filename);
+          f.seek(0); // TODO: enable to read from the specified position
+          f.getChannel().read(p.contents());
+        } catch (IOException e) {
+          throw new RuntimeException("cannot read file " + filename);
+        }
+      }
+    ```
+    write:
+    ```java
+      public synchronized void write(String filename, Page page) {
+        try {
+          RandomAccessFile f = getFile(filename);
+          f.seek(0); // TODO: enable to write from the specified position
+          f.getChannel().write(page.contents());
+        } catch (IOException e) {
+          throw new RuntimeException("cannot write to file " + filename);
+        }
+      }
+    ```
+1. Add a method `blockSize` to `FileMgr`
+    ```java
+      public int blockSize() {
+        return blocksize;
+      }
+    ```
+1. Update `main`
+
+    1. Initialize `FileMgr` and `Page`.
+    1. `FileMgr` write `Page`'s content to a file. (`Page` -> file)
+    1. `FileMgr` read the content of the file to `Page`. (file -> `Page`)
+
+
+    ```java
+    public static void main(String[] args) {
+        File dbDirectory = new File("datadir");
+        FileMgr fm = new FileMgr(dbDirectory, 400);
+        String filename = "test.txt";
+
+        // Page -> File
+        Page page1 = new Page(fm.blockSize());
+        page1.setString(0, "test");
+        fm.write(filename, page1);
+
+        // File -> Page
+        Page page2 = new Page(fm.blockSize());
+        fm.read(filename, page2);
+        System.out.println("read message: " + page2.getString(0));
+    }
+    ```
+
+    Now you can set arbitrary contents with `Page.setString(offset, string)`. (currently `offset` doesn't make effect as `FileMgr` reads and writes from position 0, which will be fixed later.)
