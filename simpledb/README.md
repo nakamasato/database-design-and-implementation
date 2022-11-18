@@ -72,6 +72,8 @@ Bundle the app
 
 ## 2. `FileMgr`
 
+![](filemgr.drawio.svg)
+
 ### 2.1. Write/read contents to/from a file
 
 Database needs to write/read data to disk.
@@ -346,7 +348,8 @@ File <-> FileMgr <-> Page(ButeBuffer)
 1. Run
 
     ```
-    
+    ./gradlew run
+    read message: test
     ```
 
 ### 2.3. Write/Read `Page` <-> Block (File)
@@ -449,5 +452,6 @@ File <-> FileMgr <-> Page(ButeBuffer)
     `Page(ByteBuffer)` <-- `FileMgr` --> `BlockId(File)`
 1. Run
     ```
+    ./gradlew run
     read message: test
     ```
