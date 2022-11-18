@@ -346,6 +346,7 @@ File <-> FileMgr <-> Page(ButeBuffer)
 1. Run
 
     ```
+    
     ```
 
 ### 2.3. Write/Read `Page` <-> Block (File)
