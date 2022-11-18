@@ -36,7 +36,7 @@ public class FileMgr {
       f.seek(blk.number() * blocksize);
       f.getChannel().read(p.contents());
     } catch (IOException e) {
-      throw new RuntimeException("cannot read file " + blk.fileName());
+      throw new RuntimeException("cannot read block " + blk);
     }
   }
 
@@ -46,7 +46,30 @@ public class FileMgr {
       f.seek(blk.number() * blocksize);
       f.getChannel().write(page.contents());
     } catch (IOException e) {
-      throw new RuntimeException("cannot write to file " + blk.fileName());
+      throw new RuntimeException("cannot write block " + blk);
+    }
+  }
+
+  public synchronized BlockId append(String filename) {
+    int newblknum = length(filename);
+    BlockId blk = new BlockId(filename, newblknum);
+    byte[] b = new byte[blocksize];
+    try {
+      RandomAccessFile f = getFile(blk.fileName());
+      f.seek(blk.number() * blocksize);
+      f.write(b);
+    } catch (IOException e) {
+      throw new RuntimeException("cannot append block " + blk);
+    }
+    return blk;
+  }
+
+  public int length(String filename) {
+    try {
+      RandomAccessFile f = getFile(filename);
+      return (int) (f.length() / blocksize);
+    } catch (IOException e) {
+      throw new RuntimeException("cannot access " + filename);
     }
   }
 
