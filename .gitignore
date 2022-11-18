@@ -5,3 +5,5 @@ firstdb
 
 # Ignore Gradle build output directory
 build
+
+simpledb/app/bin

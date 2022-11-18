@@ -342,3 +342,111 @@ File <-> FileMgr <-> Page(ButeBuffer)
     ```
 
     Now you can set arbitrary contents with `Page.setString(offset, string)`. (currently `offset` doesn't make effect as `FileMgr` reads and writes from position 0, which will be fixed later.)
+
+1. Run
+
+    ```
+    ```
+
+### 2.3. Write/Read `Page` <-> Block (File)
+
+`BlockId`: A container to hold a filename and block number
+
+1. Create `BlockId.java`
+
+    ```java
+    package simpledb.file;
+
+    public class BlockId {
+      private String filename;
+      private int blknum;
+
+      public BlockId(String filename, int blknum) {
+        this.filename = filename;
+        this.blknum = blknum;
+      }
+
+      public String fileName() {
+        return filename;
+      }
+
+      public int number() {
+        return blknum;
+      }
+
+      public boolean equals(Object obj) {
+        BlockId blk = (BlockId) obj;
+        if (blk == null)
+          return false;
+        return filename.equals(blk.fileName()) && blknum == blk.number();
+      }
+
+      public String toString() {
+        return "[file " + filename + ", block " + blknum + "]";
+      }
+
+      public int hashCode() {
+        return toString().hashCode();
+      }
+    }
+    ```
+1. Replace file in `FileMgr` with `BlockId`.
+
+    read:
+    ```java
+    public synchronized void read(BlockId blk, Page p) {
+      try {
+        RandomAccessFile f = getFile(blk.fileName());
+        f.seek(blk.number() * blocksize);
+        f.getChannel().read(p.contents());
+      } catch (IOException e) {
+        throw new RuntimeException("cannot read file " + blk.fileName());
+      }
+    }
+    ```
+
+    write:
+    ```java
+    public synchronized void write(BlockId blk, Page page) {
+      try {
+        RandomAccessFile f = getFile(blk.fileName());
+        f.seek(blk.number() * blocksize);
+        f.getChannel().write(page.contents());
+      } catch (IOException e) {
+        throw new RuntimeException("cannot write to file " + blk.fileName());
+      }
+    }
+    ```
+
+1. Update `main`
+
+    ```java
+    public static void main(String[] args) {
+        File dbDirectory = new File("datadir");
+        FileMgr fm = new FileMgr(dbDirectory, 400);
+        String filename = "test.txt";
+        // Init BlockId
+        BlockId blk = new BlockId(filename, fm.blockSize());
+
+        String msg = "test";
+        int pos = 0;
+
+        // Page -> File
+        Page page1 = new Page(fm.blockSize());
+        page1.setString(pos, msg);
+        fm.write(blk, page1);
+
+        // File -> Page
+        Page page2 = new Page(fm.blockSize());
+        fm.read(blk, page2);
+        System.out.println("read message: " + page2.getString(pos));
+    }
+    ```
+
+    Now the content and position in ByteBuffer can be specified with `msg` and `pos`.
+
+    `Page(ByteBuffer)` <-- `FileMgr` --> `BlockId(File)`
+1. Run
+    ```
+    read message: test
+    ```

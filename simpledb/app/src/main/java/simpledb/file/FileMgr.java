@@ -30,23 +30,23 @@ public class FileMgr {
         new File(dbDirectory, filename).delete();
   }
 
-  public synchronized void read(String filename, Page p) {
+  public synchronized void read(BlockId blk, Page p) {
     try {
-      RandomAccessFile f = getFile(filename);
-      f.seek(0); // TODO: enable to read from the specified position
+      RandomAccessFile f = getFile(blk.fileName());
+      f.seek(blk.number() * blocksize);
       f.getChannel().read(p.contents());
     } catch (IOException e) {
-      throw new RuntimeException("cannot read file " + filename);
+      throw new RuntimeException("cannot read file " + blk.fileName());
     }
   }
 
-  public synchronized void write(String filename, Page page) {
+  public synchronized void write(BlockId blk, Page page) {
     try {
-      RandomAccessFile f = getFile(filename);
-      f.seek(0); // TODO: enable to write from the specified position
+      RandomAccessFile f = getFile(blk.fileName());
+      f.seek(blk.number() * blocksize);
       f.getChannel().write(page.contents());
     } catch (IOException e) {
-      throw new RuntimeException("cannot write to file " + filename);
+      throw new RuntimeException("cannot write to file " + blk.fileName());
     }
   }
 
