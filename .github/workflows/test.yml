@@ -24,3 +24,7 @@ jobs:
       - name: test
         working-directory: simpledb
         run: ./gradlew test
+
+      - name: run
+        working-directory: simpledb
+        run: ./gradlew run
