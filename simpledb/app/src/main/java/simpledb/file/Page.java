@@ -8,8 +8,14 @@ public class Page {
   private ByteBuffer bb;
   public static Charset CHARSET = StandardCharsets.US_ASCII;
 
+  // for data buffer
   public Page(int blocksize) {
     bb = ByteBuffer.allocateDirect(blocksize);
+  }
+
+  // for log pages
+  public Page(byte[] b) {
+    bb = ByteBuffer.wrap(b);
   }
 
   public int getInt(int offset) {
@@ -46,7 +52,7 @@ public class Page {
 
   public static int maxLength(int strlen) {
     float bytesPerChar = CHARSET.newEncoder().maxBytesPerChar();
-    return Integer.BYTES + (strlen & (int) bytesPerChar);
+    return Integer.BYTES + (strlen * (int) bytesPerChar);
   }
 
   ByteBuffer contents() {

@@ -4,14 +4,18 @@
 package simpledb;
 
 import java.io.File;
+import java.util.Iterator;
 
 import simpledb.file.BlockId;
 import simpledb.file.FileMgr;
 import simpledb.file.Page;
+import simpledb.log.LogMgr;
 
 public class App {
 
     public static void main(String[] args) {
+
+        // 2. FileMgr
         File dbDirectory = new File("datadir");
         FileMgr fm = new FileMgr(dbDirectory, 400);
         String filename = "test.txt";
@@ -30,5 +34,50 @@ public class App {
         Page page2 = new Page(fm.blockSize());
         fm.read(blk, page2);
         System.out.println("read message: " + page2.getString(pos));
+
+        // 3. LogMgr
+        LogMgr lm = new LogMgr(fm, "simpledb.log");
+        printLogRecords(lm, "The initial empty log file:"); // print an empty log file
+        System.out.println("done");
+        createRecords(lm, 1, 35);
+        printLogRecords(lm, "The log file now has these records:");
+        createRecords(lm, 36, 70);
+        lm.flush(65);
+        printLogRecords(lm, "The log file now has these records:");
+    }
+
+    private static void printLogRecords(LogMgr lm, String msg) {
+        System.out.println(msg);
+        Iterator<byte[]> iter = lm.iterator();
+        while (iter.hasNext()) {
+            byte[] rec = iter.next();
+            Page p = new Page(rec);
+            String s = p.getString(0);
+            int npos = Page.maxLength(s.length());
+            int val = p.getInt(npos);
+            System.out.println("[" + s + ", " + val + "]");
+        }
+        System.out.println();
+    }
+
+    private static void createRecords(LogMgr lm, int start, int end) {
+        System.out.print("Creating records: ");
+        for (int i = start; i <= end; i++) {
+            byte[] rec = createLogRecord("record" + i, i + 100);
+            int lsn = lm.append(rec);
+            System.out.print(lsn + " ");
+        }
+        System.out.println();
+    }
+
+    // Create a log record having two values: a string and an integer.
+    private static byte[] createLogRecord(String s, int n) {
+        int spos = 0;
+        int npos = spos + Page.maxLength(s.length());
+        byte[] b = new byte[npos + Integer.BYTES];
+        Page p = new Page(b);
+        p.setString(spos, s);
+        p.setInt(npos, n);
+        return b;
     }
 }
