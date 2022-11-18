@@ -5,6 +5,7 @@ package simpledb;
 
 import java.io.File;
 
+import simpledb.file.BlockId;
 import simpledb.file.FileMgr;
 import simpledb.file.Page;
 
@@ -14,15 +15,20 @@ public class App {
         File dbDirectory = new File("datadir");
         FileMgr fm = new FileMgr(dbDirectory, 400);
         String filename = "test.txt";
+        // Init BlockId
+        BlockId blk = new BlockId(filename, fm.blockSize());
+
+        String msg = "test";
+        int pos = 0;
 
         // Page -> File
         Page page1 = new Page(fm.blockSize());
-        page1.setString(0, "test");
-        fm.write(filename, page1);
+        page1.setString(pos, msg);
+        fm.write(blk, page1);
 
         // File -> Page
         Page page2 = new Page(fm.blockSize());
-        fm.read(filename, page2);
-        System.out.println("read message: " + page2.getString(0));
+        fm.read(blk, page2);
+        System.out.println("read message: " + page2.getString(pos));
     }
 }
