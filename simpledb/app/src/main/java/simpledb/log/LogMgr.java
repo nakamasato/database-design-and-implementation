@@ -21,13 +21,17 @@ public class LogMgr {
     logpage = new Page(b);
     int logsize = fm.length(logfile);
     if (logsize == 0) {
-      currentblk = appendNewBlock();
+      currentblk = appendNewBlock(); // append new block if empty
     } else {
-      currentblk = new BlockId(logfile, logsize - 1);
-      fm.read(currentblk, logpage);
+      currentblk = new BlockId(logfile, logsize - 1); // get the last block
+      fm.read(currentblk, logpage); // read the current block
     }
   }
 
+  /*
+   * Flush only if the specified value is
+   * large than or equals to the lastSavedLSN
+   */
   public void flush(int lsn) {
     if (lsn >= lastSavedLSN)
       flush();
@@ -38,8 +42,16 @@ public class LogMgr {
     return new LogIterator(fm, currentblk);
   }
 
+  /*
+   * Append new content to page.
+   * Get the boundary from the integer in the position 0 in the page.
+   * If the current page is not enough, flush and add new block,
+   * and set it to the current block. The boundary is the blocksize.
+   * Write the log record from the boudary position and update the record position
+   * |<boundary>.....<appended contents><boudary pos>|
+   */
   public synchronized int append(byte[] logrec) {
-    int boundary = logpage.getInt(0);
+    int boundary = logpage.getInt(0); // the first integer indicates the position before which new content will be written.
     int recsize = logrec.length;
     int bytesneeded = recsize + Integer.BYTES;
     if (boundary - bytesneeded < Integer.BYTES) {
@@ -55,6 +67,11 @@ public class LogMgr {
     return latestLSN;
   }
 
+  /*
+   * Append a new block,
+   * writes the blocksize in the position 0,
+   * and save it to the file
+   */
   private BlockId appendNewBlock() {
     BlockId blk = fm.append(logfile);
     logpage.setInt(0, fm.blockSize());

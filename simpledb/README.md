@@ -76,9 +76,10 @@ Bundle the app
 
 ### 2.1. Write/read contents to/from a file
 
-Database needs to write/read data to disk.
-
-File <-> FileMgr <-> ByteBuffer
+1. Overview
+    Database needs to write/read data to disk.
+    File <-> FileMgr <-> ByteBuffer
+    FileMgr writes `<length><content>`
 
 1. Create `FileMgr.java`
 
@@ -218,10 +219,12 @@ File <-> FileMgr <-> ByteBuffer
 
 ### 2.2. Write/Read `Page` <-> File
 
-File <-> FileMgr <-> Page(ButeBuffer)
-
-`Page`: A container to wrap a `ByteBuffer` and responsible read and write `ByteBuffer` with `offset`. A page is initialized with the specified blocksize.
-
+1. Overview
+    1. File <-> FileMgr <-> Page(ButeBuffer)
+    1. `Page`: A container to wrap a `ByteBuffer` and responsible read and write `ByteBuffer` with `offset`. A page is initialized with the specified blocksize.
+    1. A Page object holds the contents of a disk block.
+    1. `Page.setInt` saves the Integer in the page by calling `ByteBuffer.putInt`
+    1. `Page.setBytes` saves a **blob** (binary large object) as two values: first the number of bytes in the specified blob and the nthe bytes themselves.
 
 1. Create `Page` class.
 
@@ -460,7 +463,13 @@ File <-> FileMgr <-> Page(ButeBuffer)
 
 ### 3.1. LogMgr
 
-The log manager writes log record into a log file.
+![](logmgr.drawio.svg)
+
+1. Overview
+    1. The log manager writes log record into a log file.
+    1. In a block, a new log record is added from right to left.
+    1. To know the position to save the new record, `boudary` holds the offset of the most recently added record.
+    1. `LogIterator` can read logs from new to old until no more logs exist.
 
 1. Add `append` and `length` to `file/FileMgr.java`
 
@@ -592,7 +601,7 @@ The log manager writes log record into a log file.
 
       public byte[] next() {
         if (currentpos == fm.blockSize()) {
-          blk = new BlockId(blk.fileName(), blk.number() - 1); // why -1?
+          blk = new BlockId(blk.fileName(), blk.number() - 1); // decrement block number to move to next block
           moveToBlock(blk);
         }
         byte[] rec = p.getBytes(currentpos);

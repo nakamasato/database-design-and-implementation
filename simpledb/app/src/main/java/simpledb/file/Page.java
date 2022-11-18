@@ -34,6 +34,9 @@ public class Page {
     return b;
   }
 
+  /*
+   * Save blob as two values: the length and the bytes themselves
+   */
   public void setBytes(int offset, byte[] b) {
     bb.position(offset);
     bb.putInt(b.length);
@@ -45,6 +48,9 @@ public class Page {
     return new String(b, CHARSET);
   }
 
+  /*
+   * Save string as blob
+   */
   public void setString(int offset, String s) {
     byte[] b = s.getBytes(CHARSET);
     setBytes(offset, b);

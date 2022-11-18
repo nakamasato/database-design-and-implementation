@@ -25,9 +25,14 @@ public class LogIterator implements Iterator<byte[]> {
     return currentpos < fm.blockSize() || blk.number() > 0;
   }
 
+  /*
+   * Read logs from new to old (New Block to old block)
+   * Inside a block, contents will be read from left to right.
+   * The logs are written from right to left, so the reading order is descendent.
+   */
   public byte[] next() {
     if (currentpos == fm.blockSize()) {
-      blk = new BlockId(blk.fileName(), blk.number() - 1); // why -1?
+      blk = new BlockId(blk.fileName(), blk.number() - 1); // decrement block number to move to next block
       moveToBlock(blk);
     }
     byte[] rec = p.getBytes(currentpos);
@@ -35,6 +40,12 @@ public class LogIterator implements Iterator<byte[]> {
     return rec;
   }
 
+  /*
+   * Read block contents to the page
+   * Set the boundary to the number stored in the first four bytes
+   * which indicates the boundary.
+   * Set the current position to the obtained boundary.
+   */
   private void moveToBlock(BlockId blk) {
     fm.read(blk, p);
     boundary = p.getInt(0);

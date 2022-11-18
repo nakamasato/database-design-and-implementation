@@ -50,6 +50,11 @@ public class FileMgr {
     }
   }
 
+  /*
+   * Initialize a BlockId with filename and the length of the file as blknum
+   * Write the byte contents with the length of blocksize
+   * from the position of the block
+   */
   public synchronized BlockId append(String filename) {
     int newblknum = length(filename);
     BlockId blk = new BlockId(filename, newblknum);
@@ -64,6 +69,11 @@ public class FileMgr {
     return blk;
   }
 
+  /*
+   * Return the number of the blocks of the specified file.
+   * Ususally used to get the block num to append contents to
+   * existing file
+   */
   public int length(String filename) {
     try {
       RandomAccessFile f = getFile(filename);
