@@ -6,6 +6,9 @@ package simpledb;
 import java.io.File;
 import java.util.Iterator;
 
+import simpledb.buffer.Buffer;
+import simpledb.buffer.BufferAbortException;
+import simpledb.buffer.BufferMgr;
 import simpledb.file.BlockId;
 import simpledb.file.FileMgr;
 import simpledb.file.Page;
@@ -35,7 +38,7 @@ public class App {
         fm.read(blk, page2);
         System.out.println("read message: " + page2.getString(pos));
 
-        // 3. LogMgr
+        // 3.1. LogMgr
         LogMgr lm = new LogMgr(fm, "simpledb.log");
         printLogRecords(lm, "The initial empty log file:"); // print an empty log file
         System.out.println("done");
@@ -44,6 +47,33 @@ public class App {
         createRecords(lm, 36, 70);
         lm.flush(65);
         printLogRecords(lm, "The log file now has these records:");
+
+        // 3.2. BufferMgr
+        BufferMgr bm = new BufferMgr(fm, lm, 3);
+        Buffer[] buff = new Buffer[6];
+        buff[0] = bm.pin(new BlockId("testfile", 0));
+        buff[1] = bm.pin(new BlockId("testfile", 1));
+        buff[2] = bm.pin(new BlockId("testfile", 2));
+        bm.unpin(buff[1]);
+        buff[1] = null;
+        buff[3] = bm.pin(new BlockId("testfile", 0)); // block 0 pinned twice
+        buff[4] = bm.pin(new BlockId("testfile", 1)); // block 1 repinned
+        System.out.println("Available buffers: " + bm.available());
+        try {
+            System.out.println("Attempting to pin block3...");
+            buff[5] = bm.pin(new BlockId("testfile", 3)); // will not work; no buffer available
+        } catch (BufferAbortException e) {
+            System.out.println("Exception: No available buffers");
+        }
+        bm.unpin(buff[2]);
+        buff[2] = null;
+        buff[5] = bm.pin(new BlockId("testfile", 3)); // works as there's available buffer
+        System.out.println("Final Buffer Allocation:");
+        for (int i = 0; i < buff.length; i++) {
+            Buffer b = buff[i];
+            if (b != null)
+                System.out.println("buff[" + i + "] pinned to block " + b.block());
+        }
     }
 
     private static void printLogRecords(LogMgr lm, String msg) {

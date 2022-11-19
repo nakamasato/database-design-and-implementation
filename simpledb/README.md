@@ -72,7 +72,7 @@ Bundle the app
 
 ## 2. Disk and File Management `FileMgr`
 
-![](filemgr.drawio.svg)
+![](docs/filemgr.drawio.svg)
 
 ### 2.1. Write/read contents to/from a file
 
@@ -463,7 +463,7 @@ Bundle the app
 
 ### 3.1. LogMgr
 
-![](logmgr.drawio.svg)
+![](docs/logmgr.drawio.svg)
 
 1. Overview
     1. The log manager writes log record into a log file.
@@ -661,7 +661,7 @@ Bundle the app
     1. Use them in `main()`
 
         ```java
-        // 3. LogMgr
+        // 3.1. LogMgr
         LogMgr lm = new LogMgr(fm, "simpledb.log");
         printLogRecords(lm, "The initial empty log file:"); // print an empty log file
         System.out.println("done");
@@ -810,3 +810,215 @@ Bundle the app
 
 
     </details>
+
+### 3.2. BufferMgr
+
+![](docs/buffermgr.drawio.svg)
+
+1. Overview
+    1. The **buffer manager** is responsible for the pages that hold user data. The buffer manager allocates a fixed set of pages, called the *buffer pool*. (should fit in physical memory)
+    1. These pages should come from the **I/O buffers held by the OS**
+    1. A page is *pinned* if some client is currently pinning it; otherwise, the page is *unpinned*.
+    1. **BufferMgr** has **bufferpool** as a list of **Buffer**, choose an available buffer to *pin* and *unpin* if client finished using.
+    1. **Buffer** holds `FileMgr` for writing/reading to/from file, `LogMgr` for logging, `Page` for contents, `BlockId` for block num and filenam and the information about pins.
+1. Add `buffer/Buffer.java`
+    ```java
+    package simpledb.buffer;
+
+    import simpledb.file.BlockId;
+    import simpledb.file.FileMgr;
+    import simpledb.file.Page;
+    import simpledb.log.LogMgr;
+
+    public class Buffer {
+      private FileMgr fm;
+      private LogMgr lm;
+      private Page contents;
+      private BlockId blk = null;
+      private int pins = 0;
+      private int txnum = -1;
+      private int lsn = -1;
+
+      public Buffer(FileMgr fm, LogMgr lm) {
+        this.fm = fm;
+        this.lm = lm;
+        contents = new Page(fm.blockSize());
+      }
+
+      /*
+      * Returns a block allocated to the buffer
+      */
+      public BlockId block() {
+        return blk;
+      }
+
+      public boolean isPinned() {
+        return pins > 0;
+      }
+
+      void assignToBlock(BlockId b) {
+        flush();
+        blk = b;
+        fm.read(blk, contents);
+        pins = 0;
+      }
+
+      /*
+      * Write the buffer to its disk block if it is dirty.
+      */
+      void flush() {
+        if (txnum >= 0) {
+          lm.flush(lsn);
+          fm.write(blk, contents);
+          txnum = -1;
+        }
+      }
+
+      void pin() {
+        pins++;
+      }
+
+      void unpin() {
+        pins--;
+      }
+    }
+    ```
+1. Add `buffer/BufferManager.java`
+    ```java
+    package simpledb.buffer;
+
+    import simpledb.file.BlockId;
+    import simpledb.file.FileMgr;
+    import simpledb.log.LogMgr;
+
+    public class BufferMgr {
+      private Buffer[] bufferpool;
+      private int numAvailable;
+      private static final long MAX_TIME = 10000; // 10 seconds
+
+      public BufferMgr(FileMgr fm, LogMgr lm, int numbuffs) {
+        bufferpool = new Buffer[numbuffs];
+        numAvailable = numbuffs;
+        for (int i = 0; i < numbuffs; i++)
+          bufferpool[i] = new Buffer(fm, lm);
+      }
+
+      public synchronized int available() {
+        return numAvailable;
+      }
+
+      public synchronized void unpin(Buffer buff) {
+        buff.unpin();
+        if (!buff.isPinned()) {
+          numAvailable++;
+          notifyAll();
+        }
+      }
+
+      public synchronized Buffer pin(BlockId blk) {
+        try {
+          long timestamp = System.currentTimeMillis();
+          Buffer buff = tryToPin(blk);
+          while (buff == null && !waitingTooLong(timestamp)) {
+            wait(MAX_TIME);
+            buff = tryToPin(blk);
+          }
+          if (buff == null)
+            throw new BufferAbortException();
+          return buff;
+        } catch (InterruptedException e) {
+          throw new BufferAbortException();
+        }
+      }
+
+      private boolean waitingTooLong(long starttime) {
+        return System.currentTimeMillis() - starttime > MAX_TIME;
+      }
+
+      private Buffer tryToPin(BlockId blk) {
+        Buffer buff = findExistingBuffer(blk);
+        if (buff == null) {
+          buff = chooseUnpinnedBuffer();
+          if (buff == null)
+            return null;
+          buff.assignToBlock(blk);
+        }
+        if (!buff.isPinned())
+          numAvailable--;
+        buff.pin();
+        return buff;
+      }
+
+      private Buffer findExistingBuffer(BlockId blk) {
+        for (Buffer buff : bufferpool) {
+          BlockId b = buff.block();
+          if (b != null && b.equals(blk))
+            return buff;
+        }
+        return null;
+      }
+
+      private Buffer chooseUnpinnedBuffer() {
+        for (Buffer buff : bufferpool)
+          if (!buff.isPinned())
+            return buff;
+        return null;
+      }
+    }
+    ```
+1. Add `buffer/BufferAbortException.java`
+    ```java
+    package simpledb.buffer;
+
+    @SuppressWarnings("serial")
+    public class BufferAbortException extends RuntimeException {
+
+    }
+    ```
+1. Update `main()` in `App.java`
+
+    1. Init `BufferMgr` with bufferpool 3.
+    1. Call `bm.pin` with a `BlockId` several times.
+    1. When the number of pinned blocks reaches the bufferpool size, `bm.pin` will time out.
+    1. After unpinning, we can pin again.
+    1. Finally check all the buffers in the bufferpool.
+    ```java
+        // 3.2. BufferMgr
+        BufferMgr bm = new BufferMgr(fm, lm, 3);
+        Buffer[] buff = new Buffer[6];
+        buff[0] = bm.pin(new BlockId("testfile", 0));
+        buff[1] = bm.pin(new BlockId("testfile", 1));
+        buff[2] = bm.pin(new BlockId("testfile", 2));
+        bm.unpin(buff[1]);
+        buff[1] = null;
+        buff[3] = bm.pin(new BlockId("testfile", 0)); // block 0 pinned twice
+        buff[4] = bm.pin(new BlockId("testfile", 1)); // block 1 repinned
+        System.out.println("Available buffers: " + bm.available());
+        try {
+            System.out.println("Attempting to pin block3...");
+            buff[5] = bm.pin(new BlockId("testfile", 3)); // will not work; no buffer available
+        } catch (BufferAbortException e) {
+            System.out.println("Exception: No available buffers");
+        }
+        bm.unpin(buff[2]);
+        buff[2] = null;
+        buff[5] = bm.pin(new BlockId("testfile", 3)); // works as there's available buffer
+        System.out.println("Final Buffer Allocation:");
+        for (int i = 0; i < buff.length; i++) {
+            Buffer b = buff[i];
+            if (b != null)
+                System.out.println("buff[" + i + "] pinned to block " + b.block());
+        }
+    ```
+1. Run
+    ```
+    ./gradlew run
+    Available buffers: 0
+    Attempting to pin block3...
+    Exception: No available buffers
+    Final Buffer Allocation:
+    buff[0] pinned to block [file testfile, block 0]
+    buff[3] pinned to block [file testfile, block 0]
+    buff[4] pinned to block [file testfile, block 1]
+    buff[5] pinned to block [file testfile, block 3]
+    ```
