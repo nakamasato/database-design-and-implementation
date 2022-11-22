@@ -13,101 +13,169 @@ import simpledb.file.BlockId;
 import simpledb.file.FileMgr;
 import simpledb.file.Page;
 import simpledb.log.LogMgr;
+import simpledb.tx.Transaction;
 
 public class App {
 
-    public static void main(String[] args) {
+  public static void main(String[] args) {
 
-        // 2. FileMgr
-        File dbDirectory = new File("datadir");
-        FileMgr fm = new FileMgr(dbDirectory, 400);
-        String filename = "test.txt";
-        // Init BlockId
-        BlockId blk = new BlockId(filename, fm.blockSize());
+    // 2. FileMgr
+    File dbDirectory = new File("datadir");
+    FileMgr fm = new FileMgr(dbDirectory, 400);
+    String filename = "test.txt";
+    // Init BlockId
+    BlockId blk = new BlockId(filename, fm.blockSize());
 
-        String msg = "test";
-        int pos = 0;
+    String msg = "test";
+    int pos = 0;
 
-        // Page -> File
-        Page page1 = new Page(fm.blockSize());
-        page1.setString(pos, msg);
-        fm.write(blk, page1);
+    // Page -> File
+    Page page1 = new Page(fm.blockSize());
+    page1.setString(pos, msg);
+    fm.write(blk, page1);
 
-        // File -> Page
-        Page page2 = new Page(fm.blockSize());
-        fm.read(blk, page2);
-        System.out.println("read message: " + page2.getString(pos));
+    // File -> Page
+    Page page2 = new Page(fm.blockSize());
+    fm.read(blk, page2);
+    System.out.println("read message: " + page2.getString(pos));
 
-        // 3.1. LogMgr
-        LogMgr lm = new LogMgr(fm, "simpledb.log");
-        printLogRecords(lm, "The initial empty log file:"); // print an empty log file
-        System.out.println("done");
-        createRecords(lm, 1, 35);
-        printLogRecords(lm, "The log file now has these records:");
-        createRecords(lm, 36, 70);
-        lm.flush(65);
-        printLogRecords(lm, "The log file now has these records:");
+    // 3.1. LogMgr
+    String logfile = "simpledb.log";
+    new File(dbDirectory, logfile).delete(); // if we don't delete it, the program will fail when reading the contents
+    LogMgr lm = new LogMgr(fm, logfile);
+    printLogRecords(lm, "The initial empty log file:"); // print an empty log file
+    System.out.println("done");
+    createRecords(lm, 1, 35);
+    printLogRecords(lm, "The log file now has these records:");
+    createRecords(lm, 36, 70);
+    lm.flush(65);
+    printLogRecords(lm, "The log file now has these records:");
 
-        // 3.2. BufferMgr
-        BufferMgr bm = new BufferMgr(fm, lm, 3);
-        Buffer[] buff = new Buffer[6];
-        buff[0] = bm.pin(new BlockId("testfile", 0));
-        buff[1] = bm.pin(new BlockId("testfile", 1));
-        buff[2] = bm.pin(new BlockId("testfile", 2));
-        bm.unpin(buff[1]);
-        buff[1] = null;
-        buff[3] = bm.pin(new BlockId("testfile", 0)); // block 0 pinned twice
-        buff[4] = bm.pin(new BlockId("testfile", 1)); // block 1 repinned
-        System.out.println("Available buffers: " + bm.available());
-        try {
-            System.out.println("Attempting to pin block3...");
-            buff[5] = bm.pin(new BlockId("testfile", 3)); // will not work; no buffer available
-        } catch (BufferAbortException e) {
-            System.out.println("Exception: No available buffers");
-        }
-        bm.unpin(buff[2]);
-        buff[2] = null;
-        buff[5] = bm.pin(new BlockId("testfile", 3)); // works as there's available buffer
-        System.out.println("Final Buffer Allocation:");
-        for (int i = 0; i < buff.length; i++) {
-            Buffer b = buff[i];
-            if (b != null)
-                System.out.println("buff[" + i + "] pinned to block " + b.block());
-        }
+    // 3.2. BufferMgr
+    BufferMgr bm = new BufferMgr(fm, lm, 3);
+    Buffer[] buff = new Buffer[6];
+    buff[0] = bm.pin(new BlockId("testfile", 0));
+    buff[1] = bm.pin(new BlockId("testfile", 1));
+    buff[2] = bm.pin(new BlockId("testfile", 2));
+    bm.unpin(buff[1]);
+    buff[1] = null;
+    buff[3] = bm.pin(new BlockId("testfile", 0)); // block 0 pinned twice
+    buff[4] = bm.pin(new BlockId("testfile", 1)); // block 1 repinned
+    System.out.println("Available buffers: " + bm.available());
+    try {
+      System.out.println("Attempting to pin block3...");
+      buff[5] = bm.pin(new BlockId("testfile", 3)); // will not work; no buffer available
+    } catch (BufferAbortException e) {
+      System.out.println("Exception: No available buffers");
+    }
+    bm.unpin(buff[2]);
+    buff[2] = null;
+    buff[5] = bm.pin(new BlockId("testfile", 3)); // works as there's available buffer
+    System.out.println("Final Buffer Allocation:");
+    for (int i = 0; i < buff.length; i++) {
+      Buffer b = buff[i];
+      if (b != null)
+        System.out.println("buff[" + i + "] pinned to block " + b.block());
     }
 
-    private static void printLogRecords(LogMgr lm, String msg) {
-        System.out.println(msg);
-        Iterator<byte[]> iter = lm.iterator();
-        while (iter.hasNext()) {
-            byte[] rec = iter.next();
-            Page p = new Page(rec);
-            String s = p.getString(0);
-            int npos = Page.maxLength(s.length());
-            int val = p.getInt(npos);
-            System.out.println("[" + s + ", " + val + "]");
-        }
-        System.out.println();
+    // 4. Concurrency Management
+    BlockId blk0 = new BlockId("testfile", 0);
+    BlockId blk1 = new BlockId("testfile", 1);
+    // init
+    Transaction tx1 = new Transaction(fm, lm, bm);
+    Transaction tx2 = new Transaction(fm, lm, bm);
+    tx1.pin(blk0);
+    tx2.pin(blk1);
+    pos = 0;
+    for (int i = 0; i < 6; i++) {
+      tx1.setInt(blk0, pos, pos, false); // get xlock through concurMgr
+      tx2.setInt(blk1, pos, pos, false); // xlock
+      pos += Integer.BYTES;
     }
+    tx1.setString(blk0, 30, "abc", false); // xlock
+    tx2.setString(blk1, 30, "def", false); // xlock
+    tx1.commit();
+    tx2.commit();
+    printValues(fm, "After initialization:", blk0, blk1);
 
-    private static void createRecords(LogMgr lm, int start, int end) {
-        System.out.print("Creating records: ");
-        for (int i = start; i <= end; i++) {
-            byte[] rec = createLogRecord("record" + i, i + 100);
-            int lsn = lm.append(rec);
-            System.out.print(lsn + " ");
-        }
-        System.out.println();
+    // modify
+    Transaction tx3 = new Transaction(fm, lm, bm);
+    Transaction tx4 = new Transaction(fm, lm, bm);
+    tx3.pin(blk0);
+    tx4.pin(blk1);
+    pos = 0;
+    for (int i = 0; i < 6; i++) {
+      tx3.setInt(blk0, pos, pos + 100, true);
+      tx4.setInt(blk1, pos, pos + 100, true);
+      pos += Integer.BYTES;
     }
+    System.out.println("setInt is done. now start setString");
+    tx3.setString(blk0, 30, "uvw", true);
+    tx4.setString(blk1, 30, "xyz", true);
+    bm.flushAll(3);
+    bm.flushAll(4);
+    printValues(fm, "After modifications:", blk0, blk1);
+    tx3.rollback();
+    printValues(fm, "After rollback", blk0, blk1);
+    // tx4 stops here without commiting or rolling back,
+    // so all its changes should be undone during recovery.
 
-    // Create a log record having two values: a string and an integer.
-    private static byte[] createLogRecord(String s, int n) {
-        int spos = 0;
-        int npos = spos + Page.maxLength(s.length());
-        byte[] b = new byte[npos + Integer.BYTES];
-        Page p = new Page(b);
-        p.setString(spos, s);
-        p.setInt(npos, n);
-        return b;
+    // // TODO: recovery as it needs to be executed at startup
+    // Transaction tx5 = new Transaction(fm, lm, bm);
+    // tx5.recover();
+    // printValues(fm, "After recovery", blk0, blk1);
+  }
+
+  private static void printLogRecords(LogMgr lm, String msg) {
+    System.out.println(msg);
+    Iterator<byte[]> iter = lm.iterator();
+    while (iter.hasNext()) {
+      byte[] rec = iter.next();
+      Page p = new Page(rec);
+      String s = p.getString(0);
+      int npos = Page.maxLength(s.length());
+      int val = p.getInt(npos);
+      System.out.println("[" + s + ", " + val + "]");
     }
+    System.out.println();
+  }
+
+  private static void createRecords(LogMgr lm, int start, int end) {
+    System.out.print("Creating records: ");
+    for (int i = start; i <= end; i++) {
+      byte[] rec = createLogRecord("record" + i, i + 100);
+      int lsn = lm.append(rec);
+      System.out.print(lsn + " ");
+    }
+    System.out.println();
+  }
+
+  // Create a log record having two values: a string and an integer.
+  private static byte[] createLogRecord(String s, int n) {
+    int spos = 0;
+    int npos = spos + Page.maxLength(s.length());
+    byte[] b = new byte[npos + Integer.BYTES];
+    Page p = new Page(b);
+    p.setString(spos, s);
+    p.setInt(npos, n);
+    return b;
+  }
+
+  private static void printValues(FileMgr fm, String msg, BlockId blk0, BlockId blk1) {
+    System.out.println(msg);
+    Page p0 = new Page(fm.blockSize());
+    Page p1 = new Page(fm.blockSize());
+    fm.read(blk0, p0);
+    fm.read(blk1, p1);
+    int pos = 0;
+    for (int i = 0; i < 6; i++) {
+      System.out.print(p0.getInt(pos) + " ");
+      System.out.print(p1.getInt(pos) + " ");
+      pos += Integer.BYTES;
+    }
+    System.out.print(p0.getString(30) + " ");
+    System.out.print(p1.getString(30) + " ");
+    System.out.println();
+  }
+
 }

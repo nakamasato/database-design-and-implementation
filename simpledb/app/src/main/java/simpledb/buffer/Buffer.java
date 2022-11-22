@@ -20,6 +20,10 @@ public class Buffer {
     contents = new Page(fm.blockSize());
   }
 
+  public Page contents() {
+    return contents;
+  }
+
   /*
    * Returns a block allocated to the buffer
    */
@@ -27,8 +31,18 @@ public class Buffer {
     return blk;
   }
 
+  public void setModified(int txnum, int lsn) {
+    this.txnum = txnum;
+    if (lsn >= 0)
+      this.lsn = lsn;
+  }
+
   public boolean isPinned() {
     return pins > 0;
+  }
+
+  public int modifyingTx() {
+    return txnum;
   }
 
   void assignToBlock(BlockId b) {

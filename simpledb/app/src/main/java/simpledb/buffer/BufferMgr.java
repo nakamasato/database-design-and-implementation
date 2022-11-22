@@ -20,6 +20,13 @@ public class BufferMgr {
     return numAvailable;
   }
 
+  public synchronized void flushAll(int txnum) {
+    for (Buffer buff : bufferpool) {
+      if (buff.modifyingTx() == txnum)
+        buff.flush();
+    }
+  }
+
   public synchronized void unpin(Buffer buff) {
     buff.unpin();
     if (!buff.isPinned()) {

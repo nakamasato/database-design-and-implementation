@@ -13,7 +13,7 @@ public class FileMgr {
   private int blocksize;
   private boolean isNew;
   private Map<String, RandomAccessFile> openFiles = new HashMap<>();
-  public static Charset CHARSET = StandardCharsets.US_ASCII;
+  public static final Charset CHARSET = StandardCharsets.US_ASCII;
 
   public FileMgr(File dbDirectory, int blocksize) {
     this.dbDirectory = dbDirectory;
