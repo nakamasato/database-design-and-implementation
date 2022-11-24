@@ -13,6 +13,9 @@ import simpledb.file.BlockId;
 import simpledb.file.FileMgr;
 import simpledb.file.Page;
 import simpledb.log.LogMgr;
+import simpledb.record.Layout;
+import simpledb.record.RecordPage;
+import simpledb.record.Schema;
 import simpledb.tx.Transaction;
 
 public class App {
@@ -40,6 +43,7 @@ public class App {
     System.out.println("read message: " + page2.getString(pos));
 
     // 3.1. LogMgr
+    System.out.println("3.1. LogMgr --------------------------");
     String logfile = "simpledb.log";
     new File(dbDirectory, logfile).delete(); // if we don't delete it, the program will fail when reading the contents
     LogMgr lm = new LogMgr(fm, logfile);
@@ -52,6 +56,7 @@ public class App {
     printLogRecords(lm, "The log file now has these records:");
 
     // 3.2. BufferMgr
+    System.out.println("3.2. BufferMgr --------------------------");
     BufferMgr bm = new BufferMgr(fm, lm, 3);
     Buffer[] buff = new Buffer[6];
     buff[0] = bm.pin(new BlockId("testfile", 0));
@@ -77,8 +82,17 @@ public class App {
       if (b != null)
         System.out.println("buff[" + i + "] pinned to block " + b.block());
     }
+    // unpin all the pinned buffer
+    for (int i = 0; i < buff.length; i++) {
+      Buffer b = buff[i];
+      if (b != null) {
+        bm.unpin(b);
+        System.out.println("buff[" + i + "] unpinned from block " + b.block());
+      }
+    }
 
     // 4. Concurrency Management
+    System.out.println("4. Concurrency Management --------------------------");
     BlockId blk0 = new BlockId("testfile", 0);
     BlockId blk1 = new BlockId("testfile", 1);
     // init
@@ -121,9 +135,63 @@ public class App {
     // so all its changes should be undone during recovery.
 
     // // TODO: recovery as it needs to be executed at startup
+    // You cannot just run this because tx4 has lock on blk1
+    // but only tx4.ConcurMgr can release it by either tx4.commit() or tx4.rollback()
     // Transaction tx5 = new Transaction(fm, lm, bm);
     // tx5.recover();
     // printValues(fm, "After recovery", blk0, blk1);
+
+    // 5. Record Management
+    System.out.println("5. Record Management --------------------------");
+    Transaction tx = new Transaction(fm, lm, bm);
+    Schema sch = new Schema();
+    sch.addIntField("A");
+    sch.addStringField("B", 9);
+    Layout layout = new Layout(sch);
+    for (String fldname : layout.schema().fields()) {
+      int offset = layout.offset(fldname);
+      System.out.println(fldname + " has offset " + offset);
+    }
+    BlockId blk2 = new BlockId("testfile", 2);
+    tx.pin(blk2);
+    RecordPage rp = new RecordPage(tx, blk2, layout);
+    rp.format(); // fill with zero-value
+
+    System.out.println("Filling the page with random records.");
+    int slot = rp.useNextEmptySlot(-1); // get the first available slot
+    while (slot >= 0) { // nextEmptySlot will return if it reaches the end of the block
+      int n = (int) Math.round(Math.random() * 50);
+      rp.setInt(slot, "A", n);
+      rp.setString(slot, "B", "rec" + n);
+      System.out.println("inserting into slot " + slot + ": {" + n + ", " + "rec" + n + "}");
+      slot = rp.useNextEmptySlot(slot); // get the next available slot
+    }
+
+    System.out.println("Deleting these records, whose A-values are less than 25");
+    int count = 0;
+    slot = rp.nextUsedSlot(-1); // get the first used slot
+    while (slot >= 0) {
+      int a = rp.getInt(slot, "A");
+      String b = rp.getString(slot, "B");
+      if (a < 25) {
+        count++;
+        System.out.println("Deleting slot " + slot + ": {" + a + ", " + b + "}");
+        rp.delete(slot);
+      }
+      slot = rp.nextUsedSlot(slot);
+    }
+    System.out.println(count + " values under 25 were deleted.");
+
+    System.out.println("Here are the remaining records.");
+    slot = rp.nextUsedSlot(-1); // first used slot
+    while (slot >= 0) {
+      int a = rp.getInt(slot, "A");
+      String b = rp.getString(slot, "B");
+      System.out.println("slot " + slot + ": {" + a + ", " + b + "}");
+      slot = rp.nextUsedSlot(slot);
+    }
+    tx.unpin(blk2);
+    tx.commit();
   }
 
   private static void printLogRecords(LogMgr lm, String msg) {

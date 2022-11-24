@@ -68,6 +68,7 @@ public class Transaction {
   }
 
   public void setInt(BlockId blk, int offset, int val, boolean okToLog) {
+    System.out.println("[Transaction] setInt to block " + blk.number() + " with offset " + offset + " and val " + val);
     concurMgr.xLock(blk);
     Buffer buff = mybuffers.getBuffer(blk);
     int lsn = -1;
@@ -79,6 +80,7 @@ public class Transaction {
   }
 
   public void setString(BlockId blk, int offset, String val, boolean okToLog) {
+    System.out.println("[Transaction] setString to block " + blk.number() + " with offset " + offset + " and val " + val);
     concurMgr.xLock(blk);
     Buffer buff = mybuffers.getBuffer(blk);
     int lsn = -1;
@@ -88,6 +90,20 @@ public class Transaction {
     Page p = buff.contents();
     p.setString(offset, val);
     buff.setModified(txnum, lsn);
+  }
+
+  /*
+   * Append a new block to the specified file.
+   * Get xlock for END_OF_FILE before appending
+   */
+  public BlockId append(String filename) {
+    BlockId dummyblk = new BlockId(filename, END_OF_FILE);
+    concurMgr.xLock(dummyblk);
+    return fm.append(filename);
+  }
+
+  public int blockSize() {
+    return fm.blockSize();
   }
 
   private static synchronized int nextTxNumber() {
