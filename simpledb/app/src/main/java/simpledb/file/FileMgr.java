@@ -56,6 +56,7 @@ public class FileMgr {
    * from the position of the block
    */
   public synchronized BlockId append(String filename) {
+    System.out.println("[FileMgr] appending block (size " + blocksize + ") to " + filename);
     int newblknum = length(filename);
     BlockId blk = new BlockId(filename, newblknum);
     byte[] b = new byte[blocksize];
@@ -66,6 +67,7 @@ public class FileMgr {
     } catch (IOException e) {
       throw new RuntimeException("cannot append block " + blk);
     }
+    System.out.println("[FileMgr] finished appending block. blknum: " + newblknum);
     return blk;
   }
 
