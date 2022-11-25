@@ -16,6 +16,7 @@ import simpledb.log.LogMgr;
 import simpledb.record.Layout;
 import simpledb.record.RecordPage;
 import simpledb.record.Schema;
+import simpledb.record.TableScan;
 import simpledb.tx.Transaction;
 
 public class App {
@@ -136,13 +137,15 @@ public class App {
 
     // // TODO: recovery as it needs to be executed at startup
     // You cannot just run this because tx4 has lock on blk1
-    // but only tx4.ConcurMgr can release it by either tx4.commit() or tx4.rollback()
+    // but only tx4.ConcurMgr can release it by either tx4.commit() or
+    // tx4.rollback()
     // Transaction tx5 = new Transaction(fm, lm, bm);
     // tx5.recover();
     // printValues(fm, "After recovery", blk0, blk1);
 
     // 5. Record Management
     System.out.println("5. Record Management --------------------------");
+    System.out.println("5.1. RecordPage -----------------------");
     Transaction tx = new Transaction(fm, lm, bm);
     Schema sch = new Schema();
     sch.addIntField("A");
@@ -191,6 +194,42 @@ public class App {
       slot = rp.nextUsedSlot(slot);
     }
     tx.unpin(blk2);
+    tx.commit();
+
+    System.out.println("5.2. TableScan -----------------------");
+    tx = new Transaction(fm, lm, bm);
+    System.out.println("Filling the table with 50 random records with TableScan");
+    TableScan ts = new TableScan(tx, "T", layout);
+    for (int i = 0; i < 50; i++) {
+      ts.insert();
+      int n = (int) Math.round(Math.random() * 50);
+      ts.setInt("A", n);
+      ts.setString("B", "rec" + n);
+      System.out.println("inserting into slot " + ts.getRid() + ": {" + n + ", " + "rec" + n + "}");
+    }
+
+    System.out.println("Deleting these records, whose A-values are les than 25.");
+    count = 0;
+    ts.beforeFirst();
+    while (ts.next()) {
+      int a = ts.getInt("A");
+      String b = ts.getString("B");
+      if (a < 25) {
+        count++;
+        System.out.println("Deleting slot " + ts.getRid() + ": {" + a + ", " + b + "}");
+        ts.delete();
+      }
+    }
+    System.out.println(count + " values under 25 were deleted");
+
+    System.out.println("Here are the remaining records:");
+    ts.beforeFirst();
+    while (ts.next()) {
+      int a = ts.getInt("A");
+      String b = ts.getString("B");
+      System.out.println("slot " + ts.getRid() + ": {" + a + ", " + b + "}");
+    }
+    ts.close();
     tx.commit();
   }
 
