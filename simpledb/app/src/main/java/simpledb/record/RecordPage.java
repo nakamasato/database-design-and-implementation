@@ -74,7 +74,8 @@ public class RecordPage {
   }
 
   /*
-   * Get the next available slot after the specified slot, set the flag to USED, and
+   * Get the next available slot after the specified slot, set the flag to USED,
+   * and
    * return the slot.
    * Return -1 if there's no empty slot in the block
    * In SimpleDB, it's implemented as insertAfter, but this method doesn't insert,
@@ -98,6 +99,10 @@ public class RecordPage {
       slot++;
     }
     return -1;
+  }
+
+  public BlockId block() {
+    return blk;
   }
 
   /*

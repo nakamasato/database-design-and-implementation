@@ -80,7 +80,8 @@ public class Transaction {
   }
 
   public void setString(BlockId blk, int offset, String val, boolean okToLog) {
-    System.out.println("[Transaction] setString to block " + blk.number() + " with offset " + offset + " and val " + val);
+    System.out
+        .println("[Transaction] setString to block " + blk.number() + " with offset " + offset + " and val " + val);
     concurMgr.xLock(blk);
     Buffer buff = mybuffers.getBuffer(blk);
     int lsn = -1;
@@ -109,5 +110,16 @@ public class Transaction {
   private static synchronized int nextTxNumber() {
     nextTxNum++;
     return nextTxNum;
+  }
+
+  /*
+   * Return the number of blocks in the specified file.
+   * The method first obtains Slock on the "end of file"
+   * before asking the file manager to return the file size
+   */
+  public int size(String filename) {
+    BlockId dummyblk = new BlockId(filename, END_OF_FILE);
+    concurMgr.sLock(dummyblk);
+    return fm.length(filename);
   }
 }

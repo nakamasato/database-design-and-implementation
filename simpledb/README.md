@@ -2649,3 +2649,388 @@ Bundle the app
     ```
 
     </details>
+
+### 5.2. TableScan
+
+![](docs/tablescan.drawio.svg)
+
+1. Overview
+  1. `TableScan` manages records in a table by keeping the track of a *current record*
+      1. `TableScan` hides the block structure from its client, while `Page`, `Buffer`, `Transaction`, `RecordPage` all apply to a particular block.
+  1. `RID` *record identifier* is used to identify a record, which contains `blockNumber` and `slot`
+1. Create `query/Constant.java`
+
+    ```java
+    package simpledb.query;
+
+    public class Constant implements Comparable<Constant> {
+      private Integer ival = null;
+      private String sval = null;
+
+      public Constant(Integer ival) {
+        this.ival = ival;
+      }
+
+      public Constant(String sval) {
+        this.sval = sval;
+      }
+
+      public int asInt() {
+        return ival;
+      }
+
+      public String asString() {
+        return sval;
+      }
+
+      public boolean equals(Object obj) {
+        Constant c = (Constant) obj;
+        if (c == null)
+          return false;
+        return (ival != null) ? ival.equals(c.ival) : sval.equals(c.sval);
+      }
+
+      public int compareTo(Constant c) {
+        return (ival != null) ? ival.compareTo(c.ival) : sval.compareTo(c.sval);
+      }
+
+      public int hashCode() {
+        return (ival != null) ? ival.hashCode() : sval.hashCode();
+      }
+
+      public String toString() {
+        return (ival != null) ? ival.toString() : sval.toString();
+      }
+    }
+    ```
+
+1. Create `query/Scan.java`
+
+    ```java
+    package simpledb.query;
+
+    /*
+    * This interface will be implemented by each query scan.
+    * There is a Scan class foreach relational algebra operator.
+    */
+    public interface Scan {
+
+      /*
+      * Position
+      * A subsequent call to next() will return the first record.
+      */
+      public void beforeFirst();
+
+      /*
+      * Move the scan to the next record.
+      */
+      public boolean next();
+
+      /*
+      * Return the value of the specified integer field
+      * in the current record.
+      */
+      public int getInt(String fldname);
+
+      /*
+      * Return the value of the specified string field
+      * in the current record.
+      */
+      public String geString(String fldname);
+
+      /*
+      * Return the value of the specified field in the current record.
+      */
+      public Constant getVal(String fldname);
+
+      public boolean hasField(String fldname);
+
+      /*
+      * Close the scan and its subscans, if any.
+      */
+      public void close();
+    }
+    ```
+
+1. Create `record/RID.java`
+    ```java
+    package simpledb.record;
+
+    /*
+    * An identifier of a record within a file.
+    * A RID consists of the block number of the file and
+    * the location of the record in the block.
+    */
+    public class RID {
+      private int blknum;
+      private int slot;
+
+      public RID(int blknum, int slot) {
+        this.blknum = blknum;
+        this.slot = slot;
+      }
+
+      public int blockNumber() {
+        return blknum;
+      }
+
+      public int slot() {
+        return slot;
+      }
+
+      public boolean equals(Object obj) {
+        RID r = (RID) obj;
+        return r != null && blknum == r.blknum && slot == r.slot;
+      }
+
+      public String toString() {
+        return "[" + blknum + ", " + slot + "]";
+      }
+    }
+    ```
+1. Create `query/UpdateScan.java`
+
+    ```java
+    package simpledb.query;
+
+    import simpledb.record.RID;
+
+    /*
+    * The interface will be implemented by all updatable scans.
+    */
+    public interface UpdateScan extends Scan {
+
+      /*
+      * Modify the field value of the current record.
+      */
+      public void setVal(String fldname, Constant val);
+
+      /*
+      * Modify the field value of the current record.
+      */
+      public void setInt(String fldname, int val);
+
+      /*
+      * Modify the field value of the current record.
+      */
+      public void setString(String fldname, String val);
+
+      public void insert();
+
+      public void delete();
+
+      public RID getRid();
+
+      public void moveToRid(RID rid);
+    }
+    ```
+1. Add the following code to `tx/Transaction.java`
+    ```java
+    /*
+    * Return the number of blocks in the specified file.
+    * The method first obtains Slock on the "end of file"
+    * before asking the file manager to return the file size
+    */
+    public int size(String filename) {
+      BlockId dummyblk = new BlockId(filename, END_OF_FILE);
+      concurMgr.sLock(dummyblk);
+      return fm.length(filename);
+    }
+    ```
+1. Add the following code to `record/RecordPage.java`
+    ```java
+    public BlockId block() {
+      return blk;
+    }
+    ```
+1. Create `record/TableScan.java`
+
+    ```java
+    package simpledb.record;
+
+    import static java.sql.Types.INTEGER;
+
+    import simpledb.file.BlockId;
+    import simpledb.query.Constant;
+    import simpledb.query.UpdateScan;
+    import simpledb.tx.Transaction;
+
+    public class TableScan implements UpdateScan {
+      private Transaction tx;
+      private Layout layout;
+      private RecordPage rp;
+      private String filename;
+      private int currentslot;
+
+      public TableScan(Transaction tx, String tblname, Layout layout) {
+        this.tx = tx;
+        this.layout = layout;
+        filename = tblname + ".tbl";
+        if (tx.size(filename) == 0)
+          moveToNewBlock();
+        else
+          moveToBlock(0);
+      }
+
+      // Methods to implement Scan
+
+      @Override
+      public void beforeFirst() {
+        moveToBlock(0);
+      }
+
+      @Override
+      public boolean next() {
+        currentslot = rp.nextUsedSlot(currentslot);
+        while (currentslot < 0) {
+          if (atLastBlock())
+            return false;
+          moveToBlock(rp.block().number() + 1);
+          currentslot = rp.nextUsedSlot(currentslot);
+        }
+        return true;
+      }
+
+      @Override
+      public int getInt(String fldname) {
+        return rp.getInt(currentslot, fldname);
+      }
+
+      @Override
+      public String getString(String fldname) {
+        return rp.getString(currentslot, fldname);
+      }
+
+      @Override
+      public Constant getVal(String fldname) {
+        if (layout.schema().type(fldname) == INTEGER)
+          return new Constant(getInt(fldname));
+        else
+          return new Constant(getInt(fldname));
+      }
+
+      @Override
+      public boolean hasField(String fldname) {
+        return layout.schema().hasField(fldname);
+      }
+
+      @Override
+      public void close() {
+        if (rp != null)
+          tx.unpin(rp.block());
+      }
+
+      @Override
+      public void setVal(String fldname, Constant val) {
+        if (layout.schema().type(fldname) == INTEGER)
+          setInt(fldname, val.asInt());
+        else
+          setString(fldname, val.asString());
+      }
+
+      @Override
+      public void setInt(String fldname, int val) {
+        rp.setInt(currentslot, fldname, val);
+      }
+
+      @Override
+      public void setString(String fldname, String val) {
+        rp.setString(currentslot, fldname, val);
+      }
+
+      @Override
+      public void insert() {
+        currentslot = rp.useNextEmptySlot(currentslot);
+        while (currentslot < 0) {
+          if (atLastBlock())
+            moveToNewBlock();
+          else
+            moveToBlock(rp.block().number() + 1);
+          currentslot = rp.useNextEmptySlot(currentslot);
+        }
+      }
+
+      @Override
+      public void delete() {
+        rp.delete(currentslot);
+      }
+
+      @Override
+      public RID getRid() {
+        return new RID(rp.block().number(), currentslot);
+      }
+
+      @Override
+      public void moveToRid(RID rid) {
+        close();
+        BlockId blk = new BlockId(filename, rid.blockNumber());
+        rp = new RecordPage(tx, blk, layout);
+        currentslot = rid.slot();
+      }
+
+      // private methods
+      private void moveToBlock(int blknum) {
+        close();
+        BlockId blk = new BlockId(filename, blknum);
+        rp = new RecordPage(tx, blk, layout);
+        currentslot = -1;
+      }
+
+      private void moveToNewBlock() {
+        close();
+        BlockId blk = tx.append(filename);
+        rp = new RecordPage(tx, blk, layout);
+        rp.format();
+        currentslot = -1;
+      }
+
+      private boolean atLastBlock() {
+        return rp.block().number() == tx.size(filename) - 1;
+      }
+    }
+    ```
+
+1. Add the following to `App.java`
+
+    ```java
+    System.out.println("5.2. TableScan -----------------------");
+    tx = new Transaction(fm, lm, bm);
+    System.out.println("Filling the table with 50 random records with TableScan");
+    TableScan ts = new TableScan(tx, "T", layout);
+    for (int i = 0; i < 50; i++) {
+      ts.insert();
+      int n = (int) Math.round(Math.random() * 50);
+      ts.setInt("A", n);
+      ts.setString("B", "rec" + n);
+      System.out.println("inserting into slot " + ts.getRid() + ": {" + n + ", " + "rec" + n + "}");
+    }
+
+    System.out.println("Deleting these records, whose A-values are les than 25.");
+    count = 0;
+    ts.beforeFirst();
+    while (ts.next()) {
+      int a = ts.getInt("A");
+      String b = ts.getString("B");
+      if (a < 25) {
+        count++;
+        System.out.println("Deleting slot " + ts.getRid() + ": {" + a + ", " + b + "}");
+        ts.delete();
+      }
+    }
+    System.out.println(count + " values under 25 were deleted");
+
+    System.out.println("Here are the remaining records:");
+    ts.beforeFirst();
+    while (ts.next()) {
+      int a = ts.getInt("A");
+      String b = ts.getString("B");
+      System.out.println("slot " + ts.getRid() + ": {" + a + ", " + b + "}");
+    }
+    ts.close();
+    tx.commit();
+    ```
+
+1. Run
+    ```
+    ./gradlew run
+    ```
