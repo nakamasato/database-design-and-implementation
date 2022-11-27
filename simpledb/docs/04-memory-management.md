@@ -1,4 +1,4 @@
-## Chapter4:  Memory Management `LogMgr` and `BufferMgr`
+## Chapter 4: Memory Management `LogMgr` and `BufferMgr`
 
 ### 4.1. LogMgr
 

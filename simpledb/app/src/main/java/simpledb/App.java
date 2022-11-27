@@ -3,6 +3,8 @@
  */
 package simpledb;
 
+import static java.sql.Types.INTEGER;
+
 import java.io.File;
 import java.util.Iterator;
 
@@ -13,6 +15,7 @@ import simpledb.file.BlockId;
 import simpledb.file.FileMgr;
 import simpledb.file.Page;
 import simpledb.log.LogMgr;
+import simpledb.metadata.TableMgr;
 import simpledb.record.Layout;
 import simpledb.record.RecordPage;
 import simpledb.record.Schema;
@@ -23,7 +26,7 @@ public class App {
 
   public static void main(String[] args) {
 
-    // 2. FileMgr
+    // 3. FileMgr
     File dbDirectory = new File("datadir");
     FileMgr fm = new FileMgr(dbDirectory, 400);
     String filename = "test.txt";
@@ -43,8 +46,8 @@ public class App {
     fm.read(blk, page2);
     System.out.println("read message: " + page2.getString(pos));
 
-    // 3.1. LogMgr
-    System.out.println("3.1. LogMgr --------------------------");
+    // 4.1. LogMgr
+    System.out.println("4.1. LogMgr --------------------------");
     String logfile = "simpledb.log";
     new File(dbDirectory, logfile).delete(); // if we don't delete it, the program will fail when reading the contents
     LogMgr lm = new LogMgr(fm, logfile);
@@ -56,8 +59,8 @@ public class App {
     lm.flush(65);
     printLogRecords(lm, "The log file now has these records:");
 
-    // 3.2. BufferMgr
-    System.out.println("3.2. BufferMgr --------------------------");
+    // 4.2. BufferMgr
+    System.out.println("4.2. BufferMgr --------------------------");
     BufferMgr bm = new BufferMgr(fm, lm, 3);
     Buffer[] buff = new Buffer[6];
     buff[0] = bm.pin(new BlockId("testfile", 0));
@@ -92,7 +95,7 @@ public class App {
       }
     }
 
-    // 4. Concurrency Management
+    // 5. Concurrency Management
     System.out.println("4. Concurrency Management --------------------------");
     BlockId blk0 = new BlockId("testfile", 0);
     BlockId blk1 = new BlockId("testfile", 1);
@@ -143,9 +146,9 @@ public class App {
     // tx5.recover();
     // printValues(fm, "After recovery", blk0, blk1);
 
-    // 5. Record Management
-    System.out.println("5. Record Management --------------------------");
-    System.out.println("5.1. RecordPage -----------------------");
+    // 6. Record Management
+    System.out.println("6. Record Management --------------------------");
+    System.out.println("6.1. RecordPage -----------------------");
     Transaction tx = new Transaction(fm, lm, bm);
     Schema sch = new Schema();
     sch.addIntField("A");
@@ -196,7 +199,7 @@ public class App {
     tx.unpin(blk2);
     tx.commit();
 
-    System.out.println("5.2. TableScan -----------------------");
+    System.out.println("6.2. TableScan -----------------------");
     tx = new Transaction(fm, lm, bm);
     System.out.println("Filling the table with 50 random records with TableScan");
     TableScan ts = new TableScan(tx, "T", layout);
@@ -230,6 +233,34 @@ public class App {
       System.out.println("slot " + ts.getRid() + ": {" + a + ", " + b + "}");
     }
     ts.close();
+    tx.commit();
+
+    // 7. Metadata Management
+    System.out.println("7.1. TableMgr ------------------");
+    bm = new BufferMgr(fm, lm, 8); // numbuffs: 3 is not enough
+    tx = new Transaction(fm, lm, bm);
+    TableMgr tm = new TableMgr(true, tx);
+    sch = new Schema();
+    sch.addIntField("A");
+    sch.addStringField("B", 9);
+    tm.createTable("MyTable", sch, tx);
+
+    layout = tm.getLayout("MyTable", tx);
+    int size = layout.slotSize();
+    Schema sch2 = layout.schema();
+    System.out.println("MyTable has slot size" + size);
+    System.out.println("Its fields are:");
+    for (String fldname : sch2.fields()) {
+      String type;
+      if (sch2.type(fldname) == INTEGER)
+        type = "int";
+      else {
+        int strlen = sch2.length(fldname);
+        type = "varchar(" + strlen + ")";
+      }
+
+      System.out.println(fldname + ": " + type);
+    }
     tx.commit();
   }
 

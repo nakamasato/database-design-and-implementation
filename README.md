@@ -10,7 +10,7 @@
 1. [Chapter 4: Memory Management](simpledb/docs/04-memory-management.md)
 1. [Chapter 5: Transaction Management](simpledb/docs/05-transaction-management.md)
 1. [Chapter 6: Record Management](simpledb/docs/06-record-management.md)
-1. Chapter 7: Metadata Management
+1. [Chapter 7: Metadata Management](simpledb/docs/07-metadata-management.md)
 1. Chapter 8: Query Processing
 1. Chapter 9: Parsing
 1. Chapter 10: Planning

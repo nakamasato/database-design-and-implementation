@@ -56,6 +56,11 @@ public class Page {
     setBytes(offset, b);
   }
 
+  /*
+   * The byte representation of a string depends on character encoding.
+   * Multiply the maximum number of bytes per char by the number of characters
+   * and add the first 4 bytes for an integer to store the length of the bytes.
+   */
   public static int maxLength(int strlen) {
     float bytesPerChar = CHARSET.newEncoder().maxBytesPerChar();
     return Integer.BYTES + (strlen * (int) bytesPerChar);

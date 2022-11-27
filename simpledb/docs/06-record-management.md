@@ -1,4 +1,4 @@
-## 6. Record Management
+## Chapter 6: Record Management
 ### 6.1. RecordPage
 ![](record.drawio.svg)
 
@@ -1295,7 +1295,7 @@
         if (layout.schema().type(fldname) == INTEGER)
           return new Constant(getInt(fldname));
         else
-          return new Constant(getInt(fldname));
+          return new Constant(getString(fldname));
       }
 
       @Override

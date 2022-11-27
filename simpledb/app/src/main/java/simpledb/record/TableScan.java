@@ -58,7 +58,7 @@ public class TableScan implements UpdateScan {
     if (layout.schema().type(fldname) == INTEGER)
       return new Constant(getInt(fldname));
     else
-      return new Constant(getInt(fldname));
+      return new Constant(getString(fldname));
   }
 
   @Override
@@ -114,6 +114,7 @@ public class TableScan implements UpdateScan {
 
   @Override
   public void moveToRid(RID rid) {
+    System.out.println("[TableScan] moveToRid file: " + filename + ", blk: " + rid.blockNumber() + ", slot: " + rid.slot());
     close();
     BlockId blk = new BlockId(filename, rid.blockNumber());
     rp = new RecordPage(tx, blk, layout);
@@ -122,6 +123,7 @@ public class TableScan implements UpdateScan {
 
   // private methods
   private void moveToBlock(int blknum) {
+    System.out.println("[TableScan] moveToBlock file: " + filename + ", blk: " + blknum);
     close();
     BlockId blk = new BlockId(filename, blknum);
     rp = new RecordPage(tx, blk, layout);
