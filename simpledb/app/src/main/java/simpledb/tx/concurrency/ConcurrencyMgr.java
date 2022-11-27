@@ -26,12 +26,13 @@ public class ConcurrencyMgr {
    * Shared Lock
    */
   public void sLock(BlockId blk) {
-    System.out.println("[ConcurrentMgr] starting sLock on " + blk.number() + ": " + toString());
     locks.computeIfAbsent(blk, k -> {
+      System.out
+          .println("[ConcurrencyMgr] starting new sLock on file: " + blk.fileName() + ", blk: " + blk.number() + ". ("
+              + toString() + ")");
       locktbl.sLock(k);
       return "S";
     });
-    System.out.println("[ConcurrentMgr] completed sLock on " + blk.number() + ": " + toString());
   }
 
   /*
@@ -39,24 +40,24 @@ public class ConcurrencyMgr {
    * If the block doesn't have xlock, firstly get sLock and them promote to xlock
    */
   public void xLock(BlockId blk) {
-    System.out.println("[ConcurrentMgr] starting xLock on " + blk.number() + ": " + toString());
     if (!hasXLock(blk)) {
+      System.out.println("[ConcurrencyMgr] starting new xLock on " + blk.fileName() + ", blk: " + blk.number() + ". ("
+          + toString() + ")");
       sLock(blk);
       locktbl.xLock(blk);
       locks.put(blk, "X");
     }
-    System.out.println("[ConcurrentMgr] completed xLock on " + blk.number() + ": " + toString());
   }
 
   /*
    * Release all locks
    */
   public void release() {
-    System.out.println("[ConcurrentMgr] starting release: " + toString());
+    System.out.println("[ConcurrencyMgr] starting release: " + toString());
     for (BlockId blk : locks.keySet())
       locktbl.unlock(blk);
     locks.clear();
-    System.out.println("[ConcurrentMgr] completed release: " + toString());
+    System.out.println("[ConcurrencyMgr] completed release: " + toString());
   }
 
   private boolean hasXLock(BlockId blk) {

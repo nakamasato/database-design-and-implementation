@@ -54,6 +54,6 @@ public class Layout {
     if (fldtype == INTEGER)
       return Integer.BYTES;
     else
-      return Page.maxLength(schema.length(fldname));
+      return Page.maxLength(schema.length(fldname)); // 4 bytes + length of bytes (= strlen if using ASCII)
   }
 }

@@ -1,4 +1,4 @@
-## 5. Transaction Management
+## Chapter 5: Transaction Management
 
 ![](transaction.drawio.svg)
 
