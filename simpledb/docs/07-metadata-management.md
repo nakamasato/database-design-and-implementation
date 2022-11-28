@@ -311,7 +311,7 @@
     }
     ```
 
-### StatMgr
+### 7.3. StatMgr
 
 1. `metadata/StatInfo.java`
 
@@ -421,7 +421,7 @@
       }
     }
     ```
-### 7.3. IndexMgr
+### 7.4. IndexMgr
 
 1. Add `Index` interface `index/Index.java` and `DummyIndex` that implements the interface `index/DummyIndex.java`
 
@@ -666,4 +666,4 @@
     }
     ```
 
-### 7.4. MetadataMgr
+### 7.5. MetadataMgr
