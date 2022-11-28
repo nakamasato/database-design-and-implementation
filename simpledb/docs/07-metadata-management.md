@@ -1,6 +1,6 @@
 ## Chapter 7: Metadata Management
 
-### TableMgr
+### 7.1. TableMgr
 
 1. Overview
 
@@ -256,7 +256,7 @@
     ./gradlew test
     ```
 
-### ViewMgr
+### 7.2. ViewMgr
 
 1. `metadata/ViewMgr.java`
 
@@ -421,7 +421,7 @@
       }
     }
     ```
-### IndexMgr
+### 7.3. IndexMgr
 
 1. Add `Index` interface `index/Index.java` and `DummyIndex` that implements the interface `index/DummyIndex.java`
 
@@ -666,4 +666,4 @@
     }
     ```
 
-### MetadataMgr
+### 7.4. MetadataMgr
