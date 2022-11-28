@@ -40,10 +40,10 @@ public class StatMgr {
   private synchronized void refreshStats(Transaction tx) {
     tablestats = new HashMap<>();
     numcalls = 0;
-    Layout tcatlayout = tblMgr.getLayout(tblMgr.TBL_CAT_TABLE, tx);
+    Layout tcatlayout = tblMgr.getLayout(TableMgr.TBL_CAT_TABLE, tx);
     TableScan tcat = new TableScan(tx, TableMgr.TBL_CAT_TABLE, tcatlayout);
     while (tcat.next()) {
-      String tblname = tcat.getString(tblMgr.TBL_CAT_FIELD_TABLE_NAME);
+      String tblname = tcat.getString(TableMgr.TBL_CAT_FIELD_TABLE_NAME);
       Layout layout = tblMgr.getLayout(tblname, tx);
       StatInfo si = calcTableStats(tblname, layout, tx);
       tablestats.put(tblname, si);
