@@ -423,4 +423,247 @@
     ```
 ### IndexMgr
 
+1. Add `Index` interface `index/Index.java` and `DummyIndex` that implements the interface `index/DummyIndex.java`
+
+    ```java
+    package simpledb.index;
+
+    import simpledb.query.Constant;
+    import simpledb.record.RID;
+
+    public interface Index {
+
+      /*
+      * Positions the index before the first record
+      * having the specified search key
+      */
+      public void beforeFirst(Constant searchkey);
+
+      /*
+      * Moves the index to the next record having
+      * the search key specified in the beforeFirst method
+      */
+      public boolean next();
+
+      /*
+      * Returns the dataRID value stored in the current index record
+      */
+      public RID getDataRid();
+
+      /*
+      * Inserts an index record having the specified dataval and dataRID values.
+      */
+      public void insert(Constant dataval, RID datarid);
+
+      /*
+      * Deletes the index record having the specified dataval and dataRID values.
+      */
+      public void delete(Constant dataval, RID datarid);
+
+      /*
+      * Closes the index.
+      */
+      public void close();
+
+    }
+    ```
+
+    ```java
+    package simpledb.index;
+
+    import simpledb.query.Constant;
+    import simpledb.record.Layout;
+    import simpledb.record.RID;
+    import simpledb.tx.Transaction;
+
+    public class DummyIndex implements Index {
+
+      public DummyIndex(Transaction tx, String idxname, Layout idxLayout) {
+      }
+
+      public static int searchCost(int numBlocks, int rpb) {
+        // TODO: implement later
+        return 1;
+      }
+
+      @Override
+      public void beforeFirst(Constant searchkey) {
+        // TODO Auto-generated method stub
+
+      }
+
+      @Override
+      public boolean next() {
+        // TODO Auto-generated method stub
+        return false;
+      }
+
+      @Override
+      public RID getDataRid() {
+        // TODO Auto-generated method stub
+        return null;
+      }
+
+      @Override
+      public void insert(Constant dataval, RID datarid) {
+        // TODO Auto-generated method stub
+
+      }
+
+      @Override
+      public void delete(Constant dataval, RID datarid) {
+        // TODO Auto-generated method stub
+
+      }
+
+      @Override
+      public void close() {
+        // TODO Auto-generated method stub
+
+      }
+
+    }
+    ```
+
+1. `metadata/IndexInfo.java`
+
+    ```java
+    package simpledb.metadata;
+
+    import static java.sql.Types.INTEGER;
+
+    import simpledb.index.DummyIndex;
+    import simpledb.index.Index;
+    import simpledb.record.Layout;
+    import simpledb.record.Schema;
+    import simpledb.tx.Transaction;
+
+    public class IndexInfo {
+      private String idxname;
+      private String fldname;
+      private Transaction tx;
+      private Schema tblSchema;
+      private Layout idxLayout;
+      private StatInfo si;
+
+      public IndexInfo(String idxname, String fldname, Schema tblSchema, Transaction tx, StatInfo si) {
+        this.idxname = idxname;
+        this.fldname = fldname;
+        this.tx = tx;
+        this.tblSchema = tblSchema;
+        this.idxLayout = createIdxLayout();
+        this.si = si;
+      }
+
+      public Index open() {
+        // TODO: replace with a real Index class
+        return new DummyIndex(tx, idxname, idxLayout);
+      }
+
+      public int blocksAccessed() {
+        int rpb = tx.blockSize() / idxLayout.slotSize();
+        int numBlocks = si.recordsOutput() / rpb;
+        return DummyIndex.searchCost(numBlocks, rpb);
+      }
+
+      /*
+      * Return the estimated number of records having a search key.
+      * The number of distinct values of the indexed fields.
+      * This estimate will be very poor if not evenly distributed.
+      */
+      public int recordsOutput() {
+        return si.recordsOutput() / si.distinctValues(fldname);
+      }
+
+      /*
+      * Return the distinct values for a specified field or 1 for the indexed field
+      */
+      public int distinctValues(String fname) {
+        return fldname.equals(fname) ? 1 : si.distinctValues(fldname);
+      }
+
+      /*
+      * Return the layout of the index records.
+      * The schema consists of
+      * 1. RID (the block number and record id)
+      * 2. dataval: the type is determined based on the fldname
+      */
+      private Layout createIdxLayout() {
+        Schema sch = new Schema();
+        sch.addIntField("block");
+        sch.addIntField("id");
+        if (tblSchema.type(fldname) == INTEGER)
+          sch.addIntField("dataval");
+        else {
+          int fldlen = tblSchema.length(fldname);
+          sch.addStringField("dataval", fldlen);
+        }
+        return new Layout(sch);
+      }
+    }
+    ```
+
+1. `metadata/IndexMgr.java`
+
+    ```java
+    package simpledb.metadata;
+
+    import static simpledb.metadata.TableMgr.MAX_NAME;
+
+    import java.util.HashMap;
+    import java.util.Map;
+
+    import simpledb.record.Layout;
+    import simpledb.record.Schema;
+    import simpledb.record.TableScan;
+    import simpledb.tx.Transaction;
+
+    public class IndexMgr {
+      private Layout layout;
+      private TableMgr tblmgr;
+      private StatMgr statmgr;
+      private static final String IDX_CAT_TABLE_NAME = "idxcat";
+      private static final String IDX_CAT_FIELD_INDEX_NAME = "indexname";
+      private static final String IDX_CAT_FIELD_TABLE_NAME = "tablename";
+      private static final String IDX_CAT_FIELD_FIELD_NAME = "fieldname";
+
+      public IndexMgr(boolean isnew, TableMgr tblmgr, StatMgr statmgr, Transaction tx) {
+        if (isnew) {
+          Schema sch = new Schema();
+          sch.addStringField(IDX_CAT_FIELD_INDEX_NAME, MAX_NAME);
+          sch.addStringField(IDX_CAT_FIELD_TABLE_NAME, MAX_NAME);
+          sch.addStringField(IDX_CAT_FIELD_FIELD_NAME, MAX_NAME);
+        }
+        this.tblmgr = tblmgr;
+        this.statmgr = statmgr;
+        layout = tblmgr.getLayout(IDX_CAT_FIELD_TABLE_NAME, tx);
+      }
+
+      public void creatIndex(String idxname, String tblname, String fldname, Transaction tx) {
+        TableScan ts = new TableScan(tx, IDX_CAT_TABLE_NAME, layout);
+        ts.insert();
+        ts.setString(IDX_CAT_FIELD_INDEX_NAME, idxname);
+        ts.setString(IDX_CAT_FIELD_TABLE_NAME, tblname);
+        ts.setString(IDX_CAT_FIELD_FIELD_NAME, fldname);
+        ts.close();
+      }
+
+      public Map<String, IndexInfo> getIndexInfo(String tblname, Transaction tx) {
+        Map<String, IndexInfo> result = new HashMap<>();
+        TableScan ts = new TableScan(tx, IDX_CAT_TABLE_NAME, layout);
+        while (ts.next()) {
+          if (ts.getString(IDX_CAT_FIELD_TABLE_NAME).equals(tblname)) {
+            String idxname = ts.getString(IDX_CAT_FIELD_INDEX_NAME);
+            String fldname = ts.getString(IDX_CAT_FIELD_FIELD_NAME);
+            Layout tblLayout = tblmgr.getLayout(tblname, tx);
+            StatInfo tblsi = statmgr.getStatInfo(tblname, tblLayout, tx);
+            IndexInfo ii = new IndexInfo(idxname, fldname, tblLayout.schema(), tx, tblsi);
+            result.put(fldname, ii);
+          }
+        }
+        return result;
+      }
+    }
+    ```
+
 ### MetadataMgr

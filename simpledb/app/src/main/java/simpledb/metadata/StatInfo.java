@@ -15,7 +15,7 @@ public class StatInfo {
     this.numRecs = numRecs;
   }
 
-  public int blockAccessed() {
+  public int blocksAccessed() {
     return numBlocks;
   }
 
