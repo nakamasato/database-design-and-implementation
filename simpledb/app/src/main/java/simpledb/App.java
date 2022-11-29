@@ -15,6 +15,7 @@ import simpledb.file.BlockId;
 import simpledb.file.FileMgr;
 import simpledb.file.Page;
 import simpledb.log.LogMgr;
+import simpledb.metadata.MetadataMgr;
 import simpledb.metadata.TableMgr;
 import simpledb.record.Layout;
 import simpledb.record.RecordPage;
@@ -262,6 +263,25 @@ public class App {
       System.out.println(fldname + ": " + type);
     }
     tx.commit();
+
+    System.out.println("7.5. MetadataMgr ----------------");
+    tx = new Transaction(fm, lm, bm);
+    MetadataMgr metadataMgr = new MetadataMgr(true, tx);
+    sch = new Schema();
+    sch.addStringField("name", 50);
+    sch.addIntField("count");
+
+    // Create Table
+    metadataMgr.createTable("test_table", sch, tx);
+
+    layout = metadataMgr.getLayout("test_table", tx); // read via TableScan (from the file)
+    System.out.println("layout.schema.fields.size (expected: 2): " + layout.schema().fields().size());
+    System.out.println("layout.offset for name (expected: 4): " + layout.offset("name"));
+    System.out.println("layout.offset for name (expected: 54): " + layout.offset("count"));
+
+    metadataMgr.createView("test_view", "view def", tx);
+    String viewdef = metadataMgr.getViewDef("test_view", tx); // read via TableScan (from the file)
+    System.out.println("view def: " + viewdef);
   }
 
   private static void printLogRecords(LogMgr lm, String msg) {

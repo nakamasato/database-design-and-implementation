@@ -1,7 +1,6 @@
 package simpledb.metadata;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 
@@ -33,7 +32,8 @@ public class TableMgrTest {
 
     assertEquals(2, layout.schema().fields().size());
     assertEquals(4, layout.offset("name"));
-    // 4 bytes for the empty/inuse flag, 54 bytes for name string (4 bytes for the byte
+    // 4 bytes for the empty/inuse flag, 54 bytes for name string (4 bytes for the
+    // byte
     // length and 50 bytes for bytes themselves)
     assertEquals(4 + 54, layout.offset("count"));
   }

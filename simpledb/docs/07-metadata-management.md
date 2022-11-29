@@ -667,3 +667,140 @@
     ```
 
 ### 7.5. MetadataMgr
+
+1. Add `metadata/MetadataMgr.java`
+
+    ```java
+    package simpledb.metadata;
+
+    import java.util.Map;
+
+    import simpledb.record.Layout;
+    import simpledb.record.Schema;
+    import simpledb.tx.Transaction;
+
+    /*
+    * Metadata Manager holds the four managers
+    * 1. table manager
+    * 2. view manager
+    * 3. stat manager
+    * 4. index manager
+    */
+    public class MetadataMgr {
+      private static TableMgr tblmgr;
+      private static ViewMgr viewmgr;
+      private static StatMgr statmgr;
+      private static IndexMgr idxmgr;
+
+      public MetadataMgr(boolean isnew, Transaction tx) {
+        tblmgr = new TableMgr(isnew, tx);
+        viewmgr = new ViewMgr(isnew, tblmgr, tx);
+        statmgr = new StatMgr(tblmgr, tx);
+        idxmgr = new IndexMgr(isnew, tblmgr, statmgr, tx);
+      }
+
+      public void createTable(String tblname, Schema sch, Transaction tx) {
+        tblmgr.createTable(tblname, sch, tx);
+      }
+
+      public Layout getLayout(String tblname, Transaction tx) {
+        return tblmgr.getLayout(tblname, tx);
+      }
+
+      public void createView(String viewname, String viewdef, Transaction tx) {
+        viewmgr.createView(viewname, viewdef, tx);
+      }
+
+      public String getViewDef(String viewname, Transaction tx) {
+        return viewmgr.getViewDef(viewname, tx);
+      }
+
+      public void createIndex(String idxname, String tblname, String fldname, Transaction tx) {
+        idxmgr.creatIndex(idxname, tblname, fldname, tx);
+      }
+
+      public Map<String, IndexInfo> getIndexInfo(String tblname, Transaction tx) {
+        return idxmgr.getIndexInfo(tblname, tx);
+      }
+
+      public StatInfo getStatInfo(String tblname, Layout layout, Transaction tx) {
+        return statmgr.getStatInfo(tblname, layout, tx);
+      }
+    }
+    ```
+
+1. Add the following code to App.java
+
+    ```java
+    System.out.println("7.5. MetadataMgr ----------------");
+    tx = new Transaction(fm, lm, bm);
+    MetadataMgr metadataMgr = new MetadataMgr(true, tx);
+    sch = new Schema();
+    sch.addStringField("name", 50);
+    sch.addIntField("count");
+
+    // Create Table
+    metadataMgr.createTable("test_table", sch, tx);
+
+    layout = metadataMgr.getLayout("test_table", tx); // read via TableScan (from the file)
+    System.out.println("layout.schema.fields.size (expected: 2): " + layout.schema().fields().size());
+    System.out.println("layout.offset for name (expected: 4): " + layout.offset("name"));
+    System.out.println("layout.offset for name (expected: 54): " + layout.offset("count"));
+
+    metadataMgr.createView("test_view", "view def", tx);
+    String viewdef = metadataMgr.getViewDef("test_view", tx); // read via TableScan (from the file)
+    System.out.println("view def: " + viewdef);
+    ```
+1. ToDO: test with test codes
+
+    ```java
+    package simpledb.metadata;
+
+    import static org.junit.jupiter.api.Assertions.assertEquals;
+
+    import java.io.File;
+    import java.util.Map;
+
+    import org.junit.jupiter.api.Test;
+
+    import simpledb.buffer.BufferMgr;
+    import simpledb.file.FileMgr;
+    import simpledb.log.LogMgr;
+    import simpledb.record.Layout;
+    import simpledb.record.Schema;
+    import simpledb.tx.Transaction;
+
+    public class MetadataMgrTest {
+      @Test
+      public void testMetadataMgrTest() throws Exception {
+        File dbDirectory = new File("datadir");
+        FileMgr fm = new FileMgr(dbDirectory, 400);
+        LogMgr lm = new LogMgr(fm, "simpledb.log");
+        BufferMgr bm = new BufferMgr(fm, lm, 8);
+        Transaction tx = new Transaction(fm, lm, bm);
+        MetadataMgr metadataMgr = new MetadataMgr(true, tx);
+
+        Schema sch = new Schema();
+        sch.addStringField("name", 50);
+        sch.addIntField("count");
+
+        // Create Table
+        metadataMgr.createTable("test_table", sch, tx);
+
+        Layout layout = metadataMgr.getLayout("test_table", tx); // read via TableScan (from the file)
+        assertEquals(2, layout.schema().fields().size());
+        assertEquals(4, layout.offset("name"));
+        // 4 bytes for the empty/inuse flag, 54 bytes for name string (4 bytes for the
+        // byte
+        // length and 50 bytes for bytes themselves)
+        //
+        assertEquals(4 + 54, layout.offset("count"));
+
+        // Create View
+        metadataMgr.createView("test_view", "view def", tx);
+
+        String viewdef = metadataMgr.getViewDef("test_view", tx); // read via TableScan (from the file)
+        assertEquals("view def", viewdef);
+      }
+    }
+    ```
