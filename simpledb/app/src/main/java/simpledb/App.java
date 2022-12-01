@@ -6,7 +6,9 @@ package simpledb;
 import static java.sql.Types.INTEGER;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 
 import simpledb.buffer.Buffer;
 import simpledb.buffer.BufferAbortException;
@@ -20,6 +22,7 @@ import simpledb.metadata.TableMgr;
 import simpledb.query.Constant;
 import simpledb.query.Expression;
 import simpledb.query.Predicate;
+import simpledb.query.ProjectScan;
 import simpledb.query.Scan;
 import simpledb.query.SelectScan;
 import simpledb.query.Term;
@@ -325,7 +328,14 @@ public class App {
     while (s3.next())
       System.out.println("A: " + s3.getInt("A") + ", B: " + s3.getString("B"));
 
-    s3.close();
+    System.out.println("8.2. ProjectScan");
+    // ProjectScan
+    List<String> fields = Arrays.asList("B");
+    Scan s4 = new ProjectScan(s3, fields);
+    while (s4.next())
+      System.out.println(s4.getString("B"));
+
+    s4.close();
     tx.commit();
   }
 

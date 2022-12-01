@@ -1,21 +1,21 @@
 ## Chapter 8: Query Processing
 
 ### Overview
-    1. `Scan` interface (already implemented in [5.2. TableScan](05-transaction-management.md))
-    1. `UpdateScan` interface extends `Scan` (already implemented in [5.2. TableScan](05-transaction-management.md))
-    1. `TableScan` (already implemented in [5.2. TableScan](05-transaction-management.md))
-    1. `SelectScan`: `select * from <table_name> where <predicate>`
-        ```
-        Q3 = select(select(STUDENT, GradYear=2019), MajorId=10 or MajorId=20))
-        ```
-    1. `ProjectScan`: `select <set of fields> from <table_name>`
-        ```
-        Q6 = project(select(STUDENT, MajorId=10), {SName})
-        ```
-    1. `ProductScan`: `select * from <table_name1>, <table_name2>`
-        ```
-        Q8 = product(STUDENT, DEPT)
-        ```
+1. `Scan` interface (already implemented in [5.2. TableScan](05-transaction-management.md))
+1. `UpdateScan` interface extends `Scan` (already implemented in [5.2. TableScan](05-transaction-management.md))
+1. `TableScan` (already implemented in [5.2. TableScan](05-transaction-management.md))
+1. `SelectScan`: `select * from <table_name> where <predicate>`
+    ```
+    Q3 = select(select(STUDENT, GradYear=2019), MajorId=10 or MajorId=20))
+    ```
+1. `ProjectScan`: `select <set of fields> from <table_name>`
+    ```
+    Q6 = project(select(STUDENT, MajorId=10), {SName})
+    ```
+1. `ProductScan`: `select * from <table_name1>, <table_name2>`
+    ```
+    Q8 = product(STUDENT, DEPT)
+    ```
 ### 8.1. SelectScan
 1. Create `query/Expression.java`
     1. Expression contains a pair of field name and value.
@@ -315,4 +315,84 @@
 
 ### 8.2. ProjectScan
 
+1. Add `query/ProjectScan.java`
+
+    ```java
+    package simpledb.query;
+
+    import java.util.List;
+
+    public class ProjectScan implements Scan {
+      private Scan s;
+      private List<String> fieldlist;
+
+      public ProjectScan(Scan s, List<String> fieldlist) {
+        this.s = s;
+        this.fieldlist = fieldlist;
+      }
+
+      @Override
+      public void beforeFirst() {
+        s.beforeFirst();
+      }
+
+      @Override
+      public boolean next() {
+        return s.next();
+      }
+
+      @Override
+      public int getInt(String fldname) {
+        if (hasField(fldname))
+          return s.getInt(fldname);
+        else
+          throw new RuntimeException("field " + fldname + " not found.");
+      }
+
+      @Override
+      public String getString(String fldname) {
+        if (hasField(fldname))
+          return s.getString(fldname);
+        else
+          throw new RuntimeException("field " + fldname + " not found.");
+      }
+
+      @Override
+      public Constant getVal(String fldname) {
+        if (hasField(fldname))
+          return s.getVal(fldname);
+        else
+          throw new RuntimeException("field " + fldname + " not found.");
+      }
+
+      @Override
+      public boolean hasField(String fldname) {
+        return fieldlist.contains(fldname);
+      }
+
+      @Override
+      public void close() {
+        s.close();
+      }
+    }
+    ```
+
+1. Add the following to `App.java`
+
+    ```java
+    System.out.println("8.2. ProjectScan");
+    // ProjectScan
+    List<String> fields = Arrays.asList("B");
+    Scan s4 = new ProjectScan(s3, fields);
+    while (s4.next())
+      System.out.println(s4.getString("B"));
+
+    s4.close(); // previously s3.close()
+    ```
+
+1. Run
+
+    ```
+    ./gradlew run
+    ```
 ### 8.3. ProductScan
