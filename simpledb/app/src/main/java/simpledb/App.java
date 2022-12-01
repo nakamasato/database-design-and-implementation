@@ -22,6 +22,7 @@ import simpledb.metadata.TableMgr;
 import simpledb.query.Constant;
 import simpledb.query.Expression;
 import simpledb.query.Predicate;
+import simpledb.query.ProductScan;
 import simpledb.query.ProjectScan;
 import simpledb.query.Scan;
 import simpledb.query.SelectScan;
@@ -336,6 +337,35 @@ public class App {
       System.out.println(s4.getString("B"));
 
     s4.close();
+    tx.commit();
+
+    System.out.println("8.3. ProjectScan -------------");
+    tx = new Transaction(fm, lm, bm);
+    // Schema for T2
+    sch2 = new Schema();
+    sch2.addIntField("C");
+    sch2.addStringField("D", 9);
+    Layout layout2 = new Layout(sch2);
+
+    // UpdateScan: insert random data to table T1
+    ts = new TableScan(tx, "T2", layout2);
+    ts.beforeFirst();
+    System.out.println("Inserting " + n + " random records into T2.");
+    for (int i = 0; i < n; i++) {
+      ts.insert();
+      ts.setInt("C", n - i - 1);
+      ts.setString("D", "rec" + (n - i - 1));
+    }
+    ts.close();
+
+    Scan ts1 = new TableScan(tx, "T1", layout1);
+    Scan ts2 = new TableScan(tx, "T2", layout2);
+    Scan ps = new ProductScan(ts1, ts2);
+    ps.beforeFirst();
+    System.out.println("prepare scans");
+    while (ps.next())
+      System.out.println("B: " + ps.getString("B") + ", D: " + ps.getString("D"));
+    ps.close();
     tx.commit();
   }
 

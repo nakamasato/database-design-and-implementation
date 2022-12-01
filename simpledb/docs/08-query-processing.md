@@ -396,3 +396,117 @@
     ./gradlew run
     ```
 ### 8.3. ProductScan
+1. Add `query/ProductScan.java`
+
+    ```java
+    package simpledb.query;
+    
+    /*
+     * The product relational algebra operator
+     */
+    public class ProductScan implements Scan {
+      private Scan s1;
+      private Scan s2;
+    
+      public ProductScan(Scan s1, Scan s2) {
+        this.s1 = s1;
+        this.s2 = s2;
+      }
+    
+      /*
+       * The LHS scan is positioned at its first record, and
+       * the RHS scan is positioned before its first record.
+       */
+      @Override
+      public void beforeFirst() {
+        s1.beforeFirst();
+        s1.next();
+        s2.beforeFirst();
+      }
+    
+      /*
+       * Move RHS if there's next record in the inner loop,
+       * otherwise, move the RHS to the first record and
+       * increment the LHS position (outer loop)
+       */
+      @Override
+      public boolean next() {
+        if (s2.next())
+          return true;
+        else {
+          s2.beforeFirst();
+          return s2.next() && s1.next();
+        }
+      }
+    
+      @Override
+      public int getInt(String fldname) {
+        if (s1.hasField(fldname))
+          return s1.getInt(fldname);
+        else
+          return s2.getInt(fldname);
+      }
+    
+      @Override
+      public String getString(String fldname) {
+        if (s1.hasField(fldname))
+          return s1.getString(fldname);
+        else
+          return s2.getString(fldname);
+      }
+    
+      @Override
+      public Constant getVal(String fldname) {
+        if (s1.hasField(fldname))
+          return s1.getVal(fldname);
+        else
+          return s2.getVal(fldname);
+      }
+    
+      @Override
+      public boolean hasField(String fldname) {
+        return s1.hasField(fldname) || s2.hasField(fldname);
+      }
+    
+      @Override
+      public void close() {
+        s1.close();
+        s2.close();
+      }}
+    ```
+
+1. Add the following to `App.java`
+    ```java
+    System.out.println("8.3. ProjectScan -------------");
+    tx = new Transaction(fm, lm, bm);
+    // Schema for T2
+    sch2 = new Schema();
+    sch2.addIntField("C");
+    sch2.addStringField("D", 9);
+    Layout layout2 = new Layout(sch2);
+
+    // UpdateScan: insert random data to table T1
+    ts = new TableScan(tx, "T2", layout2);
+    ts.beforeFirst();
+    System.out.println("Inserting " + n + " random records into T2.");
+    for (int i = 0; i < n; i++) {
+      ts.insert();
+      ts.setInt("C", n - i - 1);
+      ts.setString("D", "rec" + (n - i - 1));
+    }
+    ts.close();
+
+    Scan ts1 = new TableScan(tx, "T1", layout1);
+    Scan ts2 = new TableScan(tx, "T2", layout2);
+    Scan ps = new ProductScan(ts1, ts2);
+    ps.beforeFirst();
+    System.out.println("prepare scans");
+    while (ps.next())
+      System.out.println("B: " + ps.getString("B") + ", D: " + ps.getString("D"));
+    ps.close();
+    tx.commit();
+    ```
+1. Run
+    ```
+    ./gradlew run
+    ```
