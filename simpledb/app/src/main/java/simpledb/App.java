@@ -17,6 +17,13 @@ import simpledb.file.Page;
 import simpledb.log.LogMgr;
 import simpledb.metadata.MetadataMgr;
 import simpledb.metadata.TableMgr;
+import simpledb.query.Constant;
+import simpledb.query.Expression;
+import simpledb.query.Predicate;
+import simpledb.query.Scan;
+import simpledb.query.SelectScan;
+import simpledb.query.Term;
+import simpledb.query.UpdateScan;
 import simpledb.record.Layout;
 import simpledb.record.RecordPage;
 import simpledb.record.Schema;
@@ -282,6 +289,44 @@ public class App {
     metadataMgr.createView("test_view", "view def", tx);
     String viewdef = metadataMgr.getViewDef("test_view", tx); // read via TableScan (from the file)
     System.out.println("view def: " + viewdef);
+
+    // 8. Query Processing
+    System.out.println("8.1. SelectScan -------------");
+    tx = new Transaction(fm, lm, bm);
+    // Schema for T1
+    Schema sch1 = new Schema();
+    sch1.addIntField("A");
+    sch1.addStringField("B", 9);
+    Layout layout1 = new Layout(sch1);
+
+    // UpdateScan: insert random data to table T1
+    UpdateScan s1 = new TableScan(tx, "T1", layout1);
+    s1.beforeFirst();
+    int n = 10;
+    System.out.println("Inserting " + n + " random records into T1.");
+    for (int i = 0; i < n; i++) {
+      s1.insert();
+      int k = (int) Math.round(Math.random() * 50);
+      s1.setInt("A", k);
+      s1.setString("B", "rec" + k);
+    }
+    s1.close();
+
+    // TableScan of T1
+    Scan s2 = new TableScan(tx, "T1", layout1);
+
+    // SelectScan
+    Constant c = new Constant(10);
+    Term t = new Term(new Expression("A"), new Expression(c)); // where A = 10
+    Predicate pred = new Predicate(t);
+    System.out.println("The predicate is " + pred);
+    Scan s3 = new SelectScan(s2, pred);
+
+    while (s3.next())
+      System.out.println("A: " + s3.getInt("A") + ", B: " + s3.getString("B"));
+
+    s3.close();
+    tx.commit();
   }
 
   private static void printLogRecords(LogMgr lm, String msg) {
