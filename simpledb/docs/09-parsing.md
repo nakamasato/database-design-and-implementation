@@ -2,6 +2,7 @@
 
 ### Overview
 
+![](parser.drawio.svg)
 
 ### Lexer
 
