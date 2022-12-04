@@ -4,7 +4,7 @@
 
 ![](parser.drawio.svg)
 
-### Lexer
+### 9.1. Lexer
 
 1. Create `parse/Lexer.java`
     ```java
@@ -181,6 +181,3 @@
       }
     }
     ```
-
-
-###
