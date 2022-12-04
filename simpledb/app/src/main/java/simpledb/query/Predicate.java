@@ -23,6 +23,10 @@ public class Predicate {
     terms.add(t);
   }
 
+  public void conjoinWith(Predicate pred) {
+    terms.addAll(pred.terms);
+  }
+
   /*
    * Return true if all the terms are satisfied
    * with the specified scan.
