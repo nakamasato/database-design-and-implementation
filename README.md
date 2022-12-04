@@ -12,7 +12,7 @@
 1. [Chapter 6: Record Management](simpledb/docs/06-record-management.md)
 1. [Chapter 7: Metadata Management](simpledb/docs/07-metadata-management.md)
 1. [Chapter 8: Query Processing](simpledb/docs/08-query-processing.md)
-1. Chapter 9: Parsing
+1. [Chapter 9: Parsing](simpledb/docs/09-parsing.md)
 1. Chapter 10: Planning
 1. Chapter 11: JDBC Interfaces
 1. Chapter 12: Indexing
