@@ -352,7 +352,7 @@
     ./gradlew test
     ```
 
-### 9.3. Parser 2: Methods for parsing queries
+### 9.3. Parser 2: `SELECT`
 
 1. Add `parse/QueryData.java`
     ```java
@@ -497,7 +497,7 @@
     }
     ```
 
-### 9.4. Parser 3: Methods for updating (insert)
+### 9.4. Parser 3: `INSERT`
 
 1. Add `updateCmd` and `insert`
 
@@ -561,7 +561,7 @@
     import java.util.List;
 
     import simpledb.query.Constant;
-    
+
     public class InsertData {
       private String tblname;
       private List<String> flds;
@@ -603,6 +603,77 @@
     ```
 1. Run test
 
+    ```
+    ./gradlew test
+    ```
+
+### 9.5. Parser 4: `DELETE`
+
+1. Update `parse/Parser.java`
+
+    1. Add the following to `updateCmd`.
+        ```java
+        if (lex.matchKeyword("delete"))
+          return delete();
+        ```
+
+    1. Add `delete()` function.
+
+      ```java
+      /*
+       * Parse delete SQL and return DeleteData object
+       */
+      public DeleteData delete() {
+        lex.eatKeyword("delete");
+        lex.eatKeyword("from");
+        String tblname = lex.eatId();
+        Predicate pred = new Predicate();
+        if (lex.matchKeyword("where")) {
+          lex.eatKeyword("where");
+          pred = predicate();
+        }
+        return new DeleteData(tblname, pred);
+      }
+      ```
+1. Add `parse/DeleteData.java`
+    ```java
+    package simpledb.parse;
+
+    import simpledb.query.Predicate;
+
+    /*
+     * Data for the SQL delete statement
+     */
+    public class DeleteData {
+      private String tblname;
+      private Predicate pred;
+
+      public DeleteData(String tblname, Predicate pred) {
+        this.tblname = tblname;
+        this.pred = pred;
+      }
+
+      public String tableName() {
+        return tblname;
+      }
+
+      public Predicate pred() {
+        return pred;
+      }
+    }
+    ```
+1. Add test to `parse/Parser.java`
+    ```java
+    @Test
+    public void testParseDelete() {
+      String s = "delete from tbl where a = 10 and b = 'test'";
+      Parser p = new Parser(s);
+      DeleteData deleteData = (DeleteData) p.updateCmd();
+      assertEquals("tbl", deleteData.tableName());
+      assertEquals("a=10 and b=test", deleteData.pred().toString());
+    }
+    ```
+1. Run test
     ```
     ./gradlew test
     ```

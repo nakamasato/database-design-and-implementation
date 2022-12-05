@@ -102,4 +102,13 @@ public class ParserTest {
     assertEquals(new Constant(10), insertData.vals().get(0));
     assertEquals(new Constant("test"), insertData.vals().get(1));
   }
+
+  @Test
+  public void testParseDelete() {
+    String s = "delete from tbl where a = 10 and b = 'test'";
+    Parser p = new Parser(s);
+    DeleteData deleteData = (DeleteData) p.updateCmd();
+    assertEquals("tbl", deleteData.tableName());
+    assertEquals("a=10 and b=test", deleteData.pred().toString());
+  }
 }
