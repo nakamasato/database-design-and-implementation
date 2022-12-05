@@ -937,3 +937,77 @@
     ```
     ./gradlew test
     ```
+
+### 9.9. Parser 8: `CREATE INDEX`
+
+1. Add `parse/CreateIndexData.java`
+    ```java
+    package simpledb.parse;
+
+    /*
+     * Data for the SQL create index statement
+     */
+    public class CreateIndexData {
+      private String idxname;
+      private String tblname;
+      private String fldname;
+
+      public CreateIndexData(String idxname, String tblname, String fldname) {
+        this.idxname = idxname;
+        this.tblname = tblname;
+        this.fldname = fldname;
+      }
+
+      public String indexName() {
+        return idxname;
+      }
+
+      public String tableName() {
+        return tblname;
+      }
+
+      public String fieldName() {
+        return fldname;
+      }
+    }
+    ```
+1. Update `parse/Parser.java`
+
+    1. Update `create()`
+
+        ```java
+        if (lex.matchKeyword("index"))
+          return createIndex();
+        ```
+
+    1. Add `createIndex()` function
+
+        ```java
+          /*
+         * Parse create index SQL and return CreateIndexData
+         * SQL: CREATE INDEX <index_name> ON <tablename>(<fieldname>)
+         */
+        private CreateIndexData createIndex() {
+          lex.eatKeyword("index");
+          String idxname = lex.eatId();
+          lex.eatKeyword("on");
+          String tblname = lex.eatId();
+          lex.eatDelim('(');
+          String fldname = field();
+          lex.eatDelim(')');
+          return new CreateIndexData(idxname, tblname, fldname);
+        }
+        ```
+1. Add test `parse/ParserTest.java`
+
+    ```java
+    @Test
+    public void testParseCreateIndex() {
+      String s = "create index test_idx on tbl(a)";
+      Parser p = new Parser(s);
+      CreateIndexData createIndexData = (CreateIndexData) p.updateCmd();
+      assertEquals("test_idx", createIndexData.indexName());
+      assertEquals("tbl", createIndexData.tableName());
+      assertEquals("a", createIndexData.fieldName());
+    }
+    ```
