@@ -203,6 +203,10 @@ public class Parser {
       throw new BadSyntaxException();
   }
 
+  /*
+   * Parse create table SQL and return CreateTableData object
+   * SQL: CREATE TABLE <tablename> (fld1 int, fld2 varchar(20))
+   */
   public CreateTableData createTable() {
     lex.eatKeyword("table");
     String tblname = lex.eatId();
@@ -227,6 +231,10 @@ public class Parser {
     return fieldType(fldname);
   }
 
+  /*
+   * Extract field type (int or varchar) for the given field name
+   * and add a field with the field type
+   */
   private Schema fieldType(String fldname) {
     Schema schema = new Schema();
     if (lex.matchKeyword("int")) {
@@ -234,8 +242,9 @@ public class Parser {
       schema.addIntField(fldname);
     } else if (lex.matchKeyword("varchar")) {
       lex.eatKeyword("varchar");
-      int strlen = lex.eatIntConstant();
       lex.eatDelim('(');
+      int strlen = lex.eatIntConstant();
+      lex.eatDelim(')');
       schema.addStringField(fldname, strlen);
     } else {
       throw new BadSyntaxException();

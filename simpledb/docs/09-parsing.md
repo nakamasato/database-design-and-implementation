@@ -765,3 +765,110 @@
     ```
     ./gradlew test
     ```
+
+### 9.7. Parser 6: `CreateTable`
+
+1. Add `parse/CreateTableData.java`
+    ```java
+    package simpledb.parse;
+
+    import simpledb.record.Schema;
+
+    public class CreateTableData {
+        private String tblname;
+        private Schema sch;
+
+        public CreateTableData(String tblname, Schema sch) {
+            this.tblname = tblname;
+            this.sch = sch;
+        }
+
+        public String tableName() {
+            return tblname;
+        }
+
+        public Schema newSchema() {
+            return sch;
+        }
+    }
+    ```
+1. Update `parse/Parser.java`
+
+    1. Add the following to `updateCmd()` function
+
+        ```java
+        if (lex.matchKeyword("create"))
+          return create();
+        ```
+    1. Add `create()`
+
+        ```java
+        public Object create() {
+          lex.eatKeyword("create");
+          if (lex.matchKeyword("table"))
+            return createTable();
+          else
+            throw new BadSyntaxException();
+        }
+        ```
+    1. Add `createTable()`, `fieldDefs()`, `fieldDef()`, and `fieldType()`.
+        ```java
+        public CreateTableData createTable() {
+          lex.eatKeyword("table");
+          String tblname = lex.eatId();
+          lex.eatDelim('(');
+          Schema sch = fieldDefs();
+          lex.eatDelim(')');
+          return new CreateTableData(tblname, sch);
+        }
+
+        private Schema fieldDefs() {
+          Schema schema = fieldDef();
+          if (lex.matchDelim(',')) {
+            lex.eatDelim(',');
+            Schema schema2 = fieldDefs();
+            schema.addAll(schema2);
+          }
+          return schema;
+        }
+
+        private Schema fieldDef() {
+          String fldname = field();
+          return fieldType(fldname);
+        }
+
+        /*
+         * Extract field type (int or varchar) for the given field name
+         * and add a field with the field type
+         */
+        private Schema fieldType(String fldname) {
+          Schema schema = new Schema();
+          if (lex.matchKeyword("int")) {
+            lex.eatKeyword("int");
+            schema.addIntField(fldname);
+          } else if (lex.matchKeyword("varchar")) {
+            lex.eatKeyword("varchar");
+            int strlen = lex.eatIntConstant();
+            lex.eatDelim('(');
+            schema.addStringField(fldname, strlen);
+          } else {
+            throw new BadSyntaxException();
+          }
+          return schema;
+        }
+        ```
+1. Add test to `parse/ParserTest.java`
+
+    ```java
+    @Test
+    public void testParseCreateTable() {
+      String s = "create table tbl (a int, b varchar(20))";
+      Parser p = new Parser(s);
+      CreateTableData createTableData = (CreateTableData) p.updateCmd();
+      assertEquals("tbl", createTableData.tableName());
+      assertEquals(INTEGER, createTableData.newSchema().type("a"));
+      assertEquals(0, createTableData.newSchema().length("a"));
+      assertEquals(VARCHAR, createTableData.newSchema().type("b"));
+      assertEquals(20, createTableData.newSchema().length("b"));
+    }
+    ```
