@@ -91,4 +91,15 @@ public class ParserTest {
     assertFalse(qd.predicate().isEmpty());
     assertEquals("select a, b from tbl1, tbl2 where a=10 and b=test", qd.toString());
   }
+
+  @Test
+  public void testParseInsert() {
+    String s = "insert into tbl(a, b) values (10, 'test')";
+    Parser p = new Parser(s);
+    InsertData insertData = (InsertData) p.updateCmd();
+    assertEquals(Arrays.asList("a", "b"), insertData.fields());
+    assertEquals("tbl", insertData.tableName());
+    assertEquals(new Constant(10), insertData.vals().get(0));
+    assertEquals(new Constant("test"), insertData.vals().get(1));
+  }
 }

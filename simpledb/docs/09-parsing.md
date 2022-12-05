@@ -446,9 +446,9 @@
 1. Add the following code to `parse/Parser.java`
 
     ```java
-  
+
     // Methods for parsing queries
-  
+
     public QueryData query() {
       lex.eatKeyword("select");
       List<String> fields = selectList();
@@ -461,7 +461,7 @@
       }
       return new QueryData(fields, tables, pred);
     }
-  
+
     private List<String> selectList() {
       List<String> L = new ArrayList<>();
       L.add(field());
@@ -471,7 +471,7 @@
       }
       return L;
     }
-  
+
     private Collection<String> tableList() {
       Collection<String> L = new ArrayList<>();
       L.add(lex.eatId());
@@ -495,4 +495,114 @@
       assertFalse(qd.predicate().isEmpty());
       assertEquals("select a, b from tbl1, tbl2 where a=10 and b=test", qd.toString());
     }
+    ```
+
+### 9.4. Parser 3: Methods for updating (insert)
+
+1. Add `updateCmd` and `insert`
+
+    ```java
+    // Methods for parsing the various update commands
+
+    /*
+     * Call corresponding private method based on the matched keyword:
+     * 1. insert: insert()
+     */
+    public Object updateCmd() {
+      if (lex.matchKeyword("insert"))
+        return insert();
+      else
+        throw new BadSyntaxException();
+    }
+
+    /*
+     * Parse insert SQL and return InsertData object
+     */
+    private InsertData insert() {
+      lex.eatKeyword("insert");
+      lex.eatKeyword("into");
+      String tblname = lex.eatId();
+      lex.eatDelim('(');
+      List<String> flds = fieldList();
+      lex.eatDelim(')');
+      lex.eatKeyword("values");
+      lex.eatDelim('(');
+      List<Constant> vals = constList();
+      lex.eatDelim(')');
+      return new InsertData(tblname, flds, vals);
+    }
+
+    private List<String> fieldList() {
+      List<String> L = new ArrayList<>();
+      L.add(field());
+      if (lex.matchDelim(',')) {
+        lex.eatDelim(',');
+        L.addAll(fieldList());
+      }
+      return L;
+    }
+
+    private List<Constant> constList() {
+      List<Constant> L = new ArrayList<>();
+      L.add(constant());
+      if (lex.matchDelim(',')) {
+        lex.eatDelim(',');
+        L.addAll(constList());
+      }
+      return L;
+    }
+    ```
+
+1. Add `parse/InsertData.java`
+
+    ```java
+    package simpledb.parse;
+
+    import java.util.List;
+
+    import simpledb.query.Constant;
+    
+    public class InsertData {
+      private String tblname;
+      private List<String> flds;
+      private List<Constant> vals;
+
+      public InsertData(String tblname, List<String> flds, List<Constant> vals) {
+        this.tblname = tblname;
+        this.flds = flds;
+        this.vals = vals;
+      }
+
+      public String tableName() {
+        return tblname;
+      }
+
+      public List<String> fields() {
+        return flds;
+      }
+
+      public List<Constant> vals() {
+        return vals;
+      }
+    }
+    ```
+
+1. Add a test
+
+    ```java
+    @Test
+    public void testParseInsert() {
+      String s = "insert into tbl(a, b) values (10, 'test')";
+      Parser p = new Parser(s);
+      InsertData insertData = (InsertData) p.updateCmd();
+      assertEquals(Arrays.asList("a", "b"), insertData.fields());
+      assertEquals("tbl", insertData.tableName());
+      assertEquals(new Constant(10), insertData.vals().get(0));
+      assertEquals(new Constant("test"), insertData.vals().get(1));
+    }
+    ```
+1. Run test
+
+    ```
+    ./gradlew test
     ```
