@@ -111,4 +111,15 @@ public class ParserTest {
     assertEquals("tbl", deleteData.tableName());
     assertEquals("a=10 and b=test", deleteData.pred().toString());
   }
+
+  @Test
+  public void testParseModify() {
+    String s = "update tbl set a = 10 where b = 'test'";
+    Parser p = new Parser(s);
+    ModifyData modifyData = (ModifyData) p.updateCmd();
+    assertEquals("tbl", modifyData.tableName());
+    assertEquals("a", modifyData.targetField());
+    assertEquals(new Constant(10), modifyData.newValue().asConstant());
+    assertEquals("b=test", modifyData.pred().toString());
+  }
 }

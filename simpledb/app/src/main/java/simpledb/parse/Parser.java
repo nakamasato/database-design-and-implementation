@@ -112,6 +112,8 @@ public class Parser {
       return insert();
     if (lex.matchKeyword("delete"))
       return delete();
+    if (lex.matchKeyword("update"))
+      return modify();
     else
       throw new BadSyntaxException();
   }
@@ -166,5 +168,20 @@ public class Parser {
       pred = predicate();
     }
     return new DeleteData(tblname, pred);
+  }
+
+  public ModifyData modify() {
+    lex.eatKeyword("update");
+    String tblname = lex.eatId();
+    lex.eatKeyword("set");
+    String fldname = field();
+    lex.eatDelim('=');
+    Expression newval = expression();
+    Predicate pred = new Predicate();
+    if (lex.matchKeyword("where")) {
+      lex.eatKeyword("where");
+      pred = predicate();
+    }
+    return new ModifyData(tblname, fldname, newval, pred);
   }
 }
