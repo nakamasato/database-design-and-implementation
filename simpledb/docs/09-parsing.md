@@ -662,7 +662,7 @@
       }
     }
     ```
-1. Add test to `parse/Parser.java`
+1. Add test to `parse/ParserTest.java`
     ```java
     @Test
     public void testParseDelete() {
@@ -674,6 +674,94 @@
     }
     ```
 1. Run test
+    ```
+    ./gradlew test
+    ```
+
+### 9.6 Parser 5: `UPDATE`
+1. Update `parse/Parser.java`
+    1. Add the following to `updateCmd()`
+        ```java
+        if (lex.matchKeyword("update"))
+          return modify();
+        ```
+    1. Add `modify()`
+
+        ```java
+        public ModifyData modify() {
+          lex.eatKeyword("update");
+          String tblname = lex.eatId();
+          lex.eatKeyword("set");
+          String fldname = field();
+          lex.eatDelim('=');
+          Expression newval = expression();
+          Predicate pred = new Predicate();
+          if (lex.matchKeyword("where")) {
+            lex.eatKeyword("where");
+            pred = predicate();
+          }
+          return new ModifyData(tblname, fldname, newval, pred);
+        }
+        ```
+
+1. Add `parse/ModifyData.java`
+
+    ```java
+    package simpledb.parse;
+
+    import simpledb.query.Expression;
+    import simpledb.query.Predicate;
+
+    /*
+     * Data for the SQL update statement
+     */
+    public class ModifyData {
+      private String tblname;
+      private String fldname;
+      private Expression newval;
+      private Predicate pred;
+
+      public ModifyData(String tblname, String fldname, Expression newval, Predicate pred) {
+        this.tblname = tblname;
+        this.fldname = fldname;
+        this.newval = newval;
+        this.pred = pred;
+      }
+
+      public String tableName() {
+        return tblname;
+      }
+
+      public String targetField() {
+        return fldname;
+      }
+
+      public Expression newValue() {
+        return newval;
+      }
+
+      public Predicate pred() {
+        return pred;
+      }
+    }
+    ```
+1. Add test to `parse/ParserTest.java`
+
+    ```java
+    @Test
+    public void testParseModify() {
+      String s = "update tbl set a = 10 where b = 'test'";
+      Parser p = new Parser(s);
+      ModifyData modifyData = (ModifyData) p.updateCmd();
+      assertEquals("tbl", modifyData.tableName());
+      assertEquals("a", modifyData.targetField());
+      assertEquals(new Constant(10), modifyData.newValue().asConstant());
+      assertEquals("b=test", modifyData.pred().toString());
+    }
+    ```
+
+1. Run test
+
     ```
     ./gradlew test
     ```
