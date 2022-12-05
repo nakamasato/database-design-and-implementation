@@ -145,4 +145,14 @@ public class ParserTest {
     assertEquals("view_name", createViewData.viewName());
     assertEquals("select a, b from tbl where a=10 and b=test", createViewData.viewDef());
   }
+
+  @Test
+  public void testParseCreateIndex() {
+    String s = "create index test_idx on tbl(a)";
+    Parser p = new Parser(s);
+    CreateIndexData createIndexData = (CreateIndexData) p.updateCmd();
+    assertEquals("test_idx", createIndexData.indexName());
+    assertEquals("tbl", createIndexData.tableName());
+    assertEquals("a", createIndexData.fieldName());
+  }
 }

@@ -201,6 +201,8 @@ public class Parser {
       return createTable();
     if (lex.matchKeyword("view"))
       return createView();
+    if (lex.matchKeyword("index"))
+      return createIndex();
     else
       throw new BadSyntaxException();
   }
@@ -256,6 +258,7 @@ public class Parser {
 
   /*
    * Parse create view SQL and return CreateViewData
+   * SQL: CREATE VIEW <viewname> AS SELECT <field list> FROM <tablename> WHERE <predicate>
    */
   private CreateViewData createView() {
     lex.eatKeyword("view");
@@ -263,5 +266,20 @@ public class Parser {
     lex.eatKeyword("as");
     QueryData qd = query();
     return new CreateViewData(viewname, qd);
+  }
+
+  /*
+   * Parse create index SQL and return CreateIndexData
+   * SQL: CREATE INDEX <index_name> ON <tablename>(<fieldname>)
+   */
+  private CreateIndexData createIndex() {
+    lex.eatKeyword("index");
+    String idxname = lex.eatId();
+    lex.eatKeyword("on");
+    String tblname = lex.eatId();
+    lex.eatDelim('(');
+    String fldname = field();
+    lex.eatDelim(')');
+    return new CreateIndexData(idxname, tblname, fldname);
   }
 }
