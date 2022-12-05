@@ -1,10 +1,10 @@
 package simpledb.parse;
 
+import static java.sql.Types.INTEGER;
+import static java.sql.Types.VARCHAR;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static java.sql.Types.INTEGER;
-import static java.sql.Types.VARCHAR;
 
 import java.util.Arrays;
 
@@ -14,7 +14,6 @@ import simpledb.query.Constant;
 import simpledb.query.Expression;
 import simpledb.query.Predicate;
 import simpledb.query.Term;
-import simpledb.record.Schema;
 
 public class ParserTest {
   @Test
@@ -136,5 +135,14 @@ public class ParserTest {
     assertEquals(0, createTableData.newSchema().length("a"));
     assertEquals(VARCHAR, createTableData.newSchema().type("b"));
     assertEquals(20, createTableData.newSchema().length("b"));
+  }
+
+  @Test
+  public void testParseCreateView() {
+    String s = "create view view_name as select a, b from tbl where a = 10 and b = 'test'";
+    Parser p = new Parser(s);
+    CreateViewData createViewData = (CreateViewData) p.updateCmd();
+    assertEquals("view_name", createViewData.viewName());
+    assertEquals("select a, b from tbl where a=10 and b=test", createViewData.viewDef());
   }
 }

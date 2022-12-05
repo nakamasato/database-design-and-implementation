@@ -199,6 +199,8 @@ public class Parser {
     lex.eatKeyword("create");
     if (lex.matchKeyword("table"))
       return createTable();
+    if (lex.matchKeyword("view"))
+      return createView();
     else
       throw new BadSyntaxException();
   }
@@ -250,5 +252,16 @@ public class Parser {
       throw new BadSyntaxException();
     }
     return schema;
+  }
+
+  /*
+   * Parse create view SQL and return CreateViewData
+   */
+  private CreateViewData createView() {
+    lex.eatKeyword("view");
+    String viewname = lex.eatId();
+    lex.eatKeyword("as");
+    QueryData qd = query();
+    return new CreateViewData(viewname, qd);
   }
 }
