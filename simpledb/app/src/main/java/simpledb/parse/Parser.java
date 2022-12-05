@@ -8,6 +8,7 @@ import simpledb.query.Constant;
 import simpledb.query.Expression;
 import simpledb.query.Predicate;
 import simpledb.query.Term;
+import simpledb.record.Schema;
 
 public class Parser {
   private Lexer lex;
@@ -106,6 +107,10 @@ public class Parser {
   /*
    * Call corresponding private method based on the matched keyword:
    * 1. insert: insert()
+   * 2. delete: delete()
+   * 3. update: modify()
+   * 4. create: create()
+   * 5. else: BadSyntaxExceptiion()
    */
   public Object updateCmd() {
     if (lex.matchKeyword("insert"))
@@ -114,6 +119,8 @@ public class Parser {
       return delete();
     if (lex.matchKeyword("update"))
       return modify();
+    if (lex.matchKeyword("create"))
+      return create();
     else
       throw new BadSyntaxException();
   }
@@ -170,6 +177,9 @@ public class Parser {
     return new DeleteData(tblname, pred);
   }
 
+  /*
+   * Parse update SQL and return ModifyData object
+   */
   public ModifyData modify() {
     lex.eatKeyword("update");
     String tblname = lex.eatId();
@@ -183,5 +193,62 @@ public class Parser {
       pred = predicate();
     }
     return new ModifyData(tblname, fldname, newval, pred);
+  }
+
+  public Object create() {
+    lex.eatKeyword("create");
+    if (lex.matchKeyword("table"))
+      return createTable();
+    else
+      throw new BadSyntaxException();
+  }
+
+  /*
+   * Parse create table SQL and return CreateTableData object
+   * SQL: CREATE TABLE <tablename> (fld1 int, fld2 varchar(20))
+   */
+  public CreateTableData createTable() {
+    lex.eatKeyword("table");
+    String tblname = lex.eatId();
+    lex.eatDelim('(');
+    Schema sch = fieldDefs();
+    lex.eatDelim(')');
+    return new CreateTableData(tblname, sch);
+  }
+
+  private Schema fieldDefs() {
+    Schema schema = fieldDef();
+    if (lex.matchDelim(',')) {
+      lex.eatDelim(',');
+      Schema schema2 = fieldDefs();
+      schema.addAll(schema2);
+    }
+    return schema;
+  }
+
+  private Schema fieldDef() {
+    String fldname = field();
+    return fieldType(fldname);
+  }
+
+  /*
+   * Extract field type (int or varchar) for the given field name
+   * and add a field with the field type
+   */
+  private Schema fieldType(String fldname) {
+    Schema schema = new Schema();
+    if (lex.matchKeyword("int")) {
+      lex.eatKeyword("int");
+      schema.addIntField(fldname);
+    } else if (lex.matchKeyword("varchar")) {
+      lex.eatKeyword("varchar");
+      lex.eatDelim('(');
+      int strlen = lex.eatIntConstant();
+      lex.eatDelim(')');
+      schema.addStringField(fldname, strlen);
+    } else {
+      throw new BadSyntaxException();
+    }
+    return schema;
   }
 }

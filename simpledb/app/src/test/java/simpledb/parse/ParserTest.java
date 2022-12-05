@@ -3,6 +3,8 @@ package simpledb.parse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static java.sql.Types.INTEGER;
+import static java.sql.Types.VARCHAR;
 
 import java.util.Arrays;
 
@@ -12,6 +14,7 @@ import simpledb.query.Constant;
 import simpledb.query.Expression;
 import simpledb.query.Predicate;
 import simpledb.query.Term;
+import simpledb.record.Schema;
 
 public class ParserTest {
   @Test
@@ -121,5 +124,17 @@ public class ParserTest {
     assertEquals("a", modifyData.targetField());
     assertEquals(new Constant(10), modifyData.newValue().asConstant());
     assertEquals("b=test", modifyData.pred().toString());
+  }
+
+  @Test
+  public void testParseCreateTable() {
+    String s = "create table tbl (a int, b varchar(20))";
+    Parser p = new Parser(s);
+    CreateTableData createTableData = (CreateTableData) p.updateCmd();
+    assertEquals("tbl", createTableData.tableName());
+    assertEquals(INTEGER, createTableData.newSchema().type("a"));
+    assertEquals(0, createTableData.newSchema().length("a"));
+    assertEquals(VARCHAR, createTableData.newSchema().type("b"));
+    assertEquals(20, createTableData.newSchema().length("b"));
   }
 }
