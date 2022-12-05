@@ -1,5 +1,9 @@
 package simpledb.parse;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
 import simpledb.query.Constant;
 import simpledb.query.Expression;
 import simpledb.query.Predicate;
@@ -60,5 +64,40 @@ public class Parser {
       pred.conjoinWith(predicate());
     }
     return pred;
+  }
+
+  // Methods for parsing queries
+
+  public QueryData query() {
+    lex.eatKeyword("select");
+    List<String> fields = selectList();
+    lex.eatKeyword("from");
+    Collection<String> tables = tableList();
+    Predicate pred = new Predicate();
+    if (lex.matchKeyword("where")) {
+      lex.eatKeyword("where");
+      pred = predicate();
+    }
+    return new QueryData(fields, tables, pred);
+  }
+
+  private List<String> selectList() {
+    List<String> L = new ArrayList<>();
+    L.add(field());
+    if (lex.matchDelim(',')) {
+      lex.eatDelim(',');
+      L.addAll(selectList());
+    }
+    return L;
+  }
+
+  private Collection<String> tableList() {
+    Collection<String> L = new ArrayList<>();
+    L.add(lex.eatId());
+    if (lex.matchDelim(',')) {
+      lex.eatDelim(',');
+      L.addAll(tableList());
+    }
+    return L;
   }
 }
