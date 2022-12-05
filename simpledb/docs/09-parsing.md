@@ -766,7 +766,7 @@
     ./gradlew test
     ```
 
-### 9.7. Parser 6: `CreateTable`
+### 9.7. Parser 6: `CREATE TABLE`
 
 1. Add `parse/CreateTableData.java`
     ```java
@@ -871,4 +871,69 @@
       assertEquals(VARCHAR, createTableData.newSchema().type("b"));
       assertEquals(20, createTableData.newSchema().length("b"));
     }
+    ```
+
+### 9.8. Parser 7: `CREATE VIEW`
+
+1. Update `parse/Parser.java`
+    1. Update `create()`
+        ```java
+        if (lex.matchKeyword("view"))
+          return createView();
+        ```
+    1. Add `createView()`
+        ```java
+        /*
+         * Parse create view SQL and return CreateViewData
+         */
+        private CreateViewData createView() {
+          lex.eatKeyword("view");
+          String viewname = lex.eatId();
+          lex.eatKeyword("as");
+          QueryData qd = query();
+          return new CreateViewData(viewname, qd);
+        }
+        ```
+1. Add `parse/CreateViewData.java`
+
+    ```java
+    package simpledb.parse;
+
+    /*
+     * Data for the SQL create view statement
+     */
+    public class CreateViewData {
+      private String viewname;
+      private QueryData qrydata;
+
+      public CreateViewData(String viewname, QueryData qrydata) {
+        this.viewname = viewname;
+        this.qrydata = qrydata;
+      }
+
+      public String viewName() {
+        return viewname;
+      }
+
+      public String viewDef() {
+        return qrydata.toString();
+      }
+    }
+    ```
+1. Add test to `parse/ParserTest.java`
+
+    ```java
+    @Test
+    public void testParseCreateView() {
+      String s = "create view view_name as select a, b from tbl where a = 10 and b = 'test'";
+      Parser p = new Parser(s);
+      CreateViewData createViewData = (CreateViewData) p.updateCmd();
+      assertEquals("view_name", createViewData.viewName());
+      assertEquals("select a, b from tbl where a=10 and b=test", createViewData.viewDef());
+    }
+    ```
+1. Run test
+
+    ```
+    ./gradlew test
     ```
