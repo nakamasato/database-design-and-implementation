@@ -27,6 +27,10 @@ public class Predicate {
     terms.addAll(pred.terms);
   }
 
+  public boolean isEmpty() {
+    return terms.size() == 0;
+  }
+
   /*
    * Return true if all the terms are satisfied
    * with the specified scan.

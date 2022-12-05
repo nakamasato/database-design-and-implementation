@@ -351,3 +351,148 @@
     ```
     ./gradlew test
     ```
+
+### 9.3. Parser 2: Methods for parsing queries
+
+1. Add `parse/QueryData.java`
+    ```java
+    package simpledb.parse;
+
+    import java.util.Collection;
+    import java.util.List;
+
+    import simpledb.query.Predicate;
+
+    /*
+     * Data for the SQL select statement:
+     * select <fields> from <tables> where <pred>
+     */
+    public class QueryData {
+      private List<String> fields;
+      private Collection<String> tables;
+      private Predicate pred;
+
+      public QueryData(List<String> fields, Collection<String> tables, Predicate pred) {
+        this.fields = fields;
+        this.tables = tables;
+        this.pred = pred;
+      }
+
+      public List<String> fields() {
+        return fields;
+      }
+
+      public Collection<String> tables() {
+        return tables;
+      }
+
+      public Predicate predicate() {
+        return pred;
+      }
+
+      public String toString() {
+        String result = "select ";
+        // fields
+        result += String.join(", ", fields());
+        result += " from ";
+        // tables
+        result += String.join(", ", tables());
+        // where clause
+        if (!pred.isEmpty())
+          result += " where " + pred.toString();
+        return result;
+      }
+    }
+    ```
+1. Add `parse/QueryDataTest.java`
+
+    ```java
+    package simpledb.parse;
+
+    import static org.junit.jupiter.api.Assertions.assertEquals;
+
+    import java.util.Arrays;
+
+    import org.junit.jupiter.api.Test;
+
+    import simpledb.query.Expression;
+    import simpledb.query.Predicate;
+    import simpledb.query.Term;
+
+    public class QueryDataTest {
+      @Test
+      void testToStringWithFieldsAndTables() {
+        Predicate pred = new Predicate();
+        QueryData qd = new QueryData(Arrays.asList("f1", "f2", "f3"), Arrays.asList("tbl1", "tbl2"), pred);
+        String expectedString = "select f1, f2, f3 from tbl1, tbl2";
+        assertEquals(expectedString, qd.toString());
+      }
+
+      @Test
+      void testToStringWithPredicate() {
+        Term t = new Term(new Expression("f1"), new Expression("f2"));
+        Predicate pred = new Predicate(t);
+        QueryData qd = new QueryData(Arrays.asList("f1", "f2", "f3"), Arrays.asList("tbl1", "tbl2"), pred);
+        String expectedString = "select f1, f2, f3 from tbl1, tbl2 where f1=f2";
+        assertEquals(expectedString, qd.toString());
+      }
+    }
+    ```
+1. Run test
+
+    ```
+    ./gradlew test
+    ```
+1. Add the following code to `parse/Parser.java`
+
+    ```java
+  
+    // Methods for parsing queries
+  
+    public QueryData query() {
+      lex.eatKeyword("select");
+      List<String> fields = selectList();
+      lex.eatKeyword("from");
+      Collection<String> tables = tableList();
+      Predicate pred = new Predicate();
+      if (lex.matchKeyword("where")) {
+        lex.eatKeyword("where");
+        pred = predicate();
+      }
+      return new QueryData(fields, tables, pred);
+    }
+  
+    private List<String> selectList() {
+      List<String> L = new ArrayList<>();
+      L.add(field());
+      if (lex.matchDelim(',')) {
+        lex.eatDelim(',');
+        L.addAll(selectList());
+      }
+      return L;
+    }
+  
+    private Collection<String> tableList() {
+      Collection<String> L = new ArrayList<>();
+      L.add(lex.eatId());
+      if (lex.matchDelim(',')) {
+        lex.eatDelim(',');
+        L.addAll(tableList());
+      }
+      return L;
+    }
+    ```
+1. Add a test to `parse/ParserTest.java`
+
+    ```java
+    @Test
+    public void testParseQuery() {
+      String s = "select a, b from tbl1, tbl2 where a = 10 and b = 'test'";
+      Parser p = new Parser(s);
+      QueryData qd = p.query();
+      assertEquals(Arrays.asList("a", "b"), qd.fields());
+      assertEquals(Arrays.asList("tbl1", "tbl2"), qd.tables());
+      assertFalse(qd.predicate().isEmpty());
+      assertEquals("select a, b from tbl1, tbl2 where a=10 and b=test", qd.toString());
+    }
+    ```

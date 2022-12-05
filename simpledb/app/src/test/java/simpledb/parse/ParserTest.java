@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Arrays;
+
 import org.junit.jupiter.api.Test;
 
 import simpledb.query.Constant;
@@ -77,5 +79,16 @@ public class ParserTest {
     Parser p = new Parser(s);
     Predicate pred = p.predicate();
     assertEquals("a=10 and b=test", pred.toString());
+  }
+
+  @Test
+  public void testParseQuery() {
+    String s = "select a, b from tbl1, tbl2 where a = 10 and b = 'test'";
+    Parser p = new Parser(s);
+    QueryData qd = p.query();
+    assertEquals(Arrays.asList("a", "b"), qd.fields());
+    assertEquals(Arrays.asList("tbl1", "tbl2"), qd.tables());
+    assertFalse(qd.predicate().isEmpty());
+    assertEquals("select a, b from tbl1, tbl2 where a=10 and b=test", qd.toString());
   }
 }
