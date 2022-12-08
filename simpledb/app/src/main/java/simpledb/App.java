@@ -20,6 +20,7 @@ import simpledb.log.LogMgr;
 import simpledb.metadata.MetadataMgr;
 import simpledb.metadata.TableMgr;
 import simpledb.plan.Plan;
+import simpledb.plan.ProductPlan;
 import simpledb.plan.ProjectPlan;
 import simpledb.plan.SelectPlan;
 import simpledb.plan.TablePlan;
@@ -376,8 +377,7 @@ public class App {
 
     // 10. Planning
     System.out.println("10.1.1. TablePlan-------------");
-    metadataMgr.createTable("T1", sch1, tx); // create table in because tabcat doesn't have a record for T1 created
-                                             // above
+    metadataMgr.createTable("T1", sch1, tx); // tabcat doesn't have a record for T1 created above
     Plan p1 = new TablePlan(tx, "T1", metadataMgr);
 
     System.out.println("R(p1): " + p1.recordsOutput());
@@ -402,6 +402,29 @@ public class App {
     System.out.println("B(p3): " + p3.blockAccessed());
     for (String fldname : p3.schema().fields())
       System.out.println("V(p2, " + fldname + "): " + p3.distinctValues(fldname));
+
+    Scan s = p3.open();
+    while (s.next())
+      System.out.println(s.getString("B"));
+    s.close();
+
+    // Product node
+    System.out.println("10.1.4. ProductPlan-------------");
+    metadataMgr.createTable("T2", sch2, tx); // tabcat doesn't have a record for T2 created above
+    Plan p4 = new TablePlan(tx, "T2", metadataMgr);
+    Plan p5 = new ProductPlan(p1, p4);
+    Plan p6 = new SelectPlan(p5, pred);
+    System.out.println("R(p6): " + p6.recordsOutput());
+    System.out.println("B(p6): " + p6.blockAccessed());
+    for (String fldname : p6.schema().fields())
+      System.out.println("V(p6, " + fldname + "): " + p6.distinctValues(fldname));
+
+    s = p6.open();
+    s.beforeFirst(); // this is necessary for p1 to move to the first position
+    while (s.next())
+      System.out.println(
+          "A: " + s.getInt("A") + ", B: " + s.getString("B") + ", C: " + s.getInt("C") + ", D: " + s.getString("D"));
+    s.close();
 
     tx.commit();
   }

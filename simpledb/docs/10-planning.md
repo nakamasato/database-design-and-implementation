@@ -392,6 +392,11 @@
     System.out.println("B(p3): " + p3.blockAccessed());
     for (String fldname : p3.schema().fields())
       System.out.println("V(p2, " + fldname + "): " + p3.distinctValues(fldname));
+
+    Scan s = p3.open();
+    while (s.next())
+      System.out.println(s.getString("B"));
+    s.close();
     ```
 
 1. Run
@@ -404,9 +409,111 @@
     R(p3): 2
     B(p3): 1
     V(p2, B): 4
+    ...
+    rec5
+    rec5
     ```
 #### 10.1.4. ProductPlan
 
+1. Add `plan/ProductPlan.java`
+
+    ```java
+    package simpledb.plan;
+
+    import simpledb.query.ProductScan;
+    import simpledb.query.Scan;
+    import simpledb.record.Schema;
+
+    public class ProductPlan implements Plan {
+      private Plan p1;
+      private Plan p2;
+      private Schema schema = new Schema();
+
+      public ProductPlan(Plan p1, Plan p2) {
+        this.p1 = p1;
+        this.p2 = p2;
+        schema.addAll(p1.schema());
+        schema.addAll(p2.schema());
+      }
+
+      @Override
+      public Scan open() {
+        Scan s1 = p1.open();
+        Scan s2 = p2.open();
+        return new ProductScan(s1, s2);
+      }
+
+      /*
+       * Estimate the required block access
+       * B(product(p1, p2)) = B(p1) + R(p1)*B(p2)
+       */
+      @Override
+      public int blockAccessed() {
+        return p1.blockAccessed() + p1.recordsOutput() * p2.blockAccessed();
+      }
+
+      /*
+       * Estimate the number of output records
+       * R(product(p1, p2)) = R(p1)*R(p2)
+       */
+      @Override
+      public int recordsOutput() {
+        return p1.recordsOutput() * p2.recordsOutput();
+      }
+
+      /*
+       * Estimate the distinct number of field values.
+       * The distinct value is same as the underlying query.
+       */
+      @Override
+      public int distinctValues(String fldname) {
+        if (p1.schema().hasField(fldname))
+          return p1.distinctValues(fldname);
+        else
+          return p2.distinctValues(fldname);
+      }
+
+      @Override
+      public Schema schema() {
+        return schema;
+      }
+    }
+    ```
+1. Add the following code to `App.java`
+
+    ```java
+    // Product node
+    System.out.println("10.1.4. ProductPlan-------------");
+    metadataMgr.createTable("T2", sch2, tx); // tabcat doesn't have a record for T2 created above
+    Plan p4 = new TablePlan(tx, "T2", metadataMgr);
+    Plan p5 = new ProductPlan(p1, p4);
+    Plan p6 = new SelectPlan(p5, pred);
+    System.out.println("R(p6): " + p6.recordsOutput());
+    System.out.println("B(p6): " + p6.blockAccessed());
+    for (String fldname : p6.schema().fields())
+      System.out.println("V(p6, " + fldname + "): " + p6.distinctValues(fldname));
+
+    s = p6.open();
+    s.beforeFirst(); // this is necessary for p1 to move to the first position
+    while (s.next())
+      System.out.println(
+          "A: " + s.getInt("A") + ", B: " + s.getString("B") + ", C: " + s.getInt("C") + ", D: " + s.getString("D"));
+    s.close();
+    ```
+1. Run
+
+    ```
+    ./gradlew run
+    ```
+
+    ```
+    R(p6): 25
+    B(p6): 11
+    V(p6, A): 1
+    V(p6, B): 4
+    V(p6, C): 4
+    V(p6, D): 4
+    ```
 ### 10.2. Planner
 
 #### 10.2.1 BasicQueryPlanner
