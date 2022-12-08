@@ -750,6 +750,7 @@
     metadataMgr.createView("test_view", "view def", tx);
     String viewdef = metadataMgr.getViewDef("test_view", tx); // read via TableScan (from the file)
     System.out.println("view def: " + viewdef);
+    tx.commit();
     ```
 1. ToDO: test with test codes
 

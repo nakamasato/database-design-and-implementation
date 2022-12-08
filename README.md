@@ -1,6 +1,10 @@
 # Database Design and Implementation
 
 ## SimpleDB Implementation
+
+### Diagram (WIP)
+
+![](simpledb/docs/simpledb.drawio.svg)
 ### Project Init
 1. [Initialize a project](simpledb/docs/00-initialize-project.md)
 ### Step by Step
@@ -13,7 +17,7 @@
 1. [Chapter 7: Metadata Management](simpledb/docs/07-metadata-management.md)
 1. [Chapter 8: Query Processing](simpledb/docs/08-query-processing.md)
 1. [Chapter 9: Parsing](simpledb/docs/09-parsing.md)
-1. Chapter 10: Planning
+1. [Chapter 10: Planning](simpledb/docs/10-planning.md)
 1. Chapter 11: JDBC Interfaces
 1. Chapter 12: Indexing
 1. Chapter 13: Materialization and Sorting
