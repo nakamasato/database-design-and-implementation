@@ -310,7 +310,7 @@
     System.out.println("R(p2): " + p2.recordsOutput());
     System.out.println("B(p2): " + p2.blockAccessed());
     for (String fldname : p2.schema().fields())
-      System.out.println("V(p2, " + fldname + "): " + p1.distinctValues(fldname));
+      System.out.println("V(p2, " + fldname + "): " + p2.distinctValues(fldname));
     ```
 
 1. Run.
@@ -323,11 +323,88 @@
     10.1.2. SelectPlan-------------
     R(p2): 2
     B(p2): 1
-    V(p2, A): 4
+    V(p2, A): 1
     V(p2, B): 4
     ```
 
 #### 10.1.3. ProjectPlan
+
+1. Add `ProjectPlan`
+
+    ```java
+    package simpledb.plan;
+
+    import java.util.List;
+
+    import simpledb.query.ProjectScan;
+    import simpledb.query.Scan;
+    import simpledb.record.Schema;
+
+    /*
+     * Plan class corresponding to the project
+     * relational algebra operator
+     */
+    public class ProjectPlan implements Plan {
+      private Plan p;
+      private Schema schema = new Schema();
+
+      public ProjectPlan(Plan p, List<String> fieldlist) {
+        this.p = p;
+        for (String fldname : fieldlist)
+          schema.add(fldname, p.schema());
+      }
+
+      @Override
+      public Scan open() {
+        Scan s = p.open();
+        return new ProjectScan(s, schema.fields());
+      }
+
+      @Override
+      public int blockAccessed() {
+        return p.blockAccessed();
+      }
+
+      @Override
+      public int recordsOutput() {
+        return p.recordsOutput();
+      }
+
+      @Override
+      public int distinctValues(String fldname) {
+        return p.distinctValues(fldname);
+      }
+
+      @Override
+      public Schema schema() {
+        return schema;
+      }
+    }
+    ```
+
+1. Add the following to `App.java` (before the last `tx.commit()`)
+
+    ```java
+    // Project node
+    System.out.println("10.1.3. ProjectPlan-------------");
+    ProjectPlan p3 = new ProjectPlan(p2, fields);
+    System.out.println("R(p3): " + p3.recordsOutput());
+    System.out.println("B(p3): " + p3.blockAccessed());
+    for (String fldname : p3.schema().fields())
+      System.out.println("V(p2, " + fldname + "): " + p3.distinctValues(fldname));
+    ```
+
+1. Run
+    ```
+    ./gradlew run
+    ```
+
+    ```
+    10.1.3. ProjectPlan-------------
+    R(p3): 2
+    B(p3): 1
+    V(p2, B): 4
+    ```
 #### 10.1.4. ProductPlan
 
 ### 10.2. Planner

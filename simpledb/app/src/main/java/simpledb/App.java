@@ -20,6 +20,7 @@ import simpledb.log.LogMgr;
 import simpledb.metadata.MetadataMgr;
 import simpledb.metadata.TableMgr;
 import simpledb.plan.Plan;
+import simpledb.plan.ProjectPlan;
 import simpledb.plan.SelectPlan;
 import simpledb.plan.TablePlan;
 import simpledb.query.Constant;
@@ -392,7 +393,15 @@ public class App {
     System.out.println("R(p2): " + p2.recordsOutput());
     System.out.println("B(p2): " + p2.blockAccessed());
     for (String fldname : p2.schema().fields())
-      System.out.println("V(p2, " + fldname + "): " + p1.distinctValues(fldname));
+      System.out.println("V(p2, " + fldname + "): " + p2.distinctValues(fldname));
+
+    // Project node
+    System.out.println("10.1.3. ProjectPlan-------------");
+    ProjectPlan p3 = new ProjectPlan(p2, fields);
+    System.out.println("R(p3): " + p3.recordsOutput());
+    System.out.println("B(p3): " + p3.blockAccessed());
+    for (String fldname : p3.schema().fields())
+      System.out.println("V(p2, " + fldname + "): " + p3.distinctValues(fldname));
 
     tx.commit();
   }
