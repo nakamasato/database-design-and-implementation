@@ -30,7 +30,7 @@ public class Predicate {
   }
 
   public boolean isEmpty() {
-    return terms.size() == 0;
+    return terms.isEmpty();
   }
 
   /*
