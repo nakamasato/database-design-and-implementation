@@ -135,6 +135,198 @@
     ```
 
 #### 10.1.2. SelectPlan
+
+1. Add the reductionFactor to `query/Term.java`
+
+    ```java
+    /*
+     * Calculate the extent to which selecting on the term reduces the number of
+     * records output by a query.
+     * If reduction factor is 2, the term cuts the size in half.
+     */
+    public int reductionFactor(Plan p) {
+      String lhsName;
+      String rhsName;
+      // max of 1/(distinct values of the field)
+      if (lhs.isFieldName() && rhs.isFieldName()) {
+        lhsName = lhs.asFieldName();
+        rhsName = rhs.asFieldName();
+        return Math.max(p.distinctValues(lhsName), p.distinctValues(rhsName));
+      }
+      if (lhs.isFieldName()) {
+        lhsName = lhs.asFieldName();
+        return p.distinctValues(lhsName); // 1/(distinct values of the field)
+      }
+      if (rhs.isFieldName()) {
+        rhsName = rhs.asFieldName();
+        return p.distinctValues(rhsName); // 1/(distinct values of the field)
+      }
+      if (lhs.asConstant().equals(rhs.asConstant())) // no change
+        return 1;
+      else
+        return Integer.MAX_VALUE; // not match -> infinite reduction
+    }
+
+    /*
+     * If the term is in the form of F=c, return c
+     * otherwise, return null.
+     */
+    public Constant equatesWithConstant(String fldname) {
+      if (lhs.isFieldName() && lhs.asFieldName().equals(fldname) && !rhs.isFieldName())
+        return rhs.asConstant();
+      else if (rhs.isFieldName() && rhs.asFieldName().equals(fldname) && !lhs.isFieldName())
+        return lhs.asConstant();
+      else
+        return null;
+    }
+
+    /*
+     * If the term is in the form of F1=F2, return the field name
+     * otherwise, return null
+     */
+    public String equatesWithField(String fldname) {
+      if (lhs.isFieldName() && lhs.asFieldName().equals(fldname) && rhs.isFieldName())
+        return rhs.asFieldName();
+      else if (rhs.isFieldName() && rhs.asFieldName().equals(fldname) && lhs.isFieldName())
+        return lhs.asFieldName();
+      else
+        return null;
+    }
+    ```
+
+1.  Add the reductionFactor to `query/Predicate.java`
+
+    ```java
+    /*
+     * The product of all the term's reduction factors
+     */
+    public int reductionFactor(Plan p) {
+      int factor = 1;
+      for (Term t : terms)
+        factor *= t.reductionFactor(p);
+      return factor;
+    }
+
+    /*
+     * Determine if there is a term of the form "F=c"
+     * where F is the specified field and c is some constant.
+     * If true, return the constant, otherwise return null.
+     */
+    public Object equatesWithConstant(String fldname) {
+      for (Term t : terms) {
+        Constant c = t.equatesWithConstant(fldname);
+        if (c != null)
+          return c;
+      }
+      return null;
+    }
+
+    /*
+     * Determine if there is a term of the form "F1=F2"
+     * where F1 is the specified field and F2 is another.
+     * If true, return the F2 field name, otherwise return null.
+     */
+    public String equatesWithField(String fldname) {
+      for (Term t : terms) {
+        String s = t.equatesWithField(fldname);
+        if (s != null)
+          return s;
+      }
+      return null;
+    }
+    ```
+
+1. Add `plan/SelectPlan.java`
+
+    ```java
+    package simpledb.plan;
+
+    import simpledb.query.Predicate;
+    import simpledb.query.Scan;
+    import simpledb.query.SelectScan;
+    import simpledb.record.Schema;
+
+    /*
+     * The Plan class corresponding to the select
+     * relational algebra operator
+     */
+    public class SelectPlan implements Plan {
+      private Plan p;
+      private Predicate pred;
+
+      public SelectPlan(Plan p, Predicate pred) {
+        this.p = p;
+        this.pred = pred;
+      }
+
+      @Override
+      public Scan open() {
+        Scan s = p.open();
+        return new SelectScan(s, pred);
+      }
+
+      @Override
+      public int blockAccessed() {
+        return p.blockAccessed();
+      }
+
+      /*
+       * Estimate the number of output records in the selectiion,
+       * which is determined by the reduction factor of the predicate.
+       */
+      @Override
+      public int recordsOutput() {
+        return p.recordsOutput() / pred.reductionFactor(p);
+      }
+
+      @Override
+      public int distinctValues(String fldname) {
+        if (pred.equatesWithConstant(fldname) != null)
+          return 1;
+        else {
+          String fldname2 = pred.equatesWithField(fldname);
+          if (fldname2 != null)
+            return Math.min(p.distinctValues(fldname), p.distinctValues(fldname2));
+          else
+            return p.distinctValues(fldname);
+        }
+      }
+
+      @Override
+      public Schema schema() {
+        return p.schema();
+      }
+    }
+    ```
+
+1. Add the following code to `App.java` (before the last `tx.commit()`)
+
+    ```java
+    // Select node
+    System.out.println("10.1.2. SelectPlan-------------");
+    t = new Term(new Expression("A"), new Expression(new Constant(5)));
+    pred = new Predicate(t);
+    Plan p2 = new SelectPlan(p1, pred);
+    System.out.println("R(p2): " + p2.recordsOutput());
+    System.out.println("B(p2): " + p2.blockAccessed());
+    for (String fldname : p2.schema().fields())
+      System.out.println("V(p2, " + fldname + "): " + p1.distinctValues(fldname));
+    ```
+
+1. Run.
+
+    ```
+    ./gradlew run
+    ```
+
+    ```
+    10.1.2. SelectPlan-------------
+    R(p2): 2
+    B(p2): 1
+    V(p2, A): 4
+    V(p2, B): 4
+    ```
+
 #### 10.1.3. ProjectPlan
 #### 10.1.4. ProductPlan
 
