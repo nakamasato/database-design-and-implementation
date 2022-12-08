@@ -19,6 +19,8 @@ import simpledb.file.Page;
 import simpledb.log.LogMgr;
 import simpledb.metadata.MetadataMgr;
 import simpledb.metadata.TableMgr;
+import simpledb.plan.Plan;
+import simpledb.plan.TablePlan;
 import simpledb.query.Constant;
 import simpledb.query.Expression;
 import simpledb.query.Predicate;
@@ -293,6 +295,7 @@ public class App {
     metadataMgr.createView("test_view", "view def", tx);
     String viewdef = metadataMgr.getViewDef("test_view", tx); // read via TableScan (from the file)
     System.out.println("view def: " + viewdef);
+    tx.commit();
 
     // 8. Query Processing
     System.out.println("8.1. SelectScan -------------");
@@ -365,7 +368,19 @@ public class App {
     System.out.println("prepare scans");
     while (ps.next())
       System.out.println("B: " + ps.getString("B") + ", D: " + ps.getString("D"));
-    ps.close();
+    ps.close(); // call sub scan's close() recurvely and eventually release the target block of underlying tablescan by tx.unpin(rp.block())
+    tx.commit(); // release all locks on blocks
+
+    // 10. Planning
+    System.out.println("10.1. TablePlan-------------");
+    metadataMgr.createTable("T1", sch1, tx); // create table in because tabcat doesn't have a record for T1 created above
+    Plan p1 = new TablePlan(tx, "T1", metadataMgr);
+
+    System.out.println("R(p1): " + p1.recordsOutput());
+    System.out.println("B(p1): " + p1.blockAccessed());
+    for (String fldname : sch1.fields())
+      System.out.println("V(p1, " + fldname + "): " + p1.distinctValues(fldname));
+
     tx.commit();
   }
 
