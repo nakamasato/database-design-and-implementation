@@ -20,6 +20,7 @@ import simpledb.log.LogMgr;
 import simpledb.metadata.MetadataMgr;
 import simpledb.metadata.TableMgr;
 import simpledb.plan.Plan;
+import simpledb.plan.SelectPlan;
 import simpledb.plan.TablePlan;
 import simpledb.query.Constant;
 import simpledb.query.Expression;
@@ -368,18 +369,30 @@ public class App {
     System.out.println("prepare scans");
     while (ps.next())
       System.out.println("B: " + ps.getString("B") + ", D: " + ps.getString("D"));
-    ps.close(); // call sub scan's close() recurvely and eventually release the target block of underlying tablescan by tx.unpin(rp.block())
+    ps.close(); // call sub scan's close() recurvely and eventually release the target block of
+                // underlying tablescan by tx.unpin(rp.block())
     tx.commit(); // release all locks on blocks
 
     // 10. Planning
-    System.out.println("10.1. TablePlan-------------");
-    metadataMgr.createTable("T1", sch1, tx); // create table in because tabcat doesn't have a record for T1 created above
+    System.out.println("10.1.1. TablePlan-------------");
+    metadataMgr.createTable("T1", sch1, tx); // create table in because tabcat doesn't have a record for T1 created
+                                             // above
     Plan p1 = new TablePlan(tx, "T1", metadataMgr);
 
     System.out.println("R(p1): " + p1.recordsOutput());
     System.out.println("B(p1): " + p1.blockAccessed());
-    for (String fldname : sch1.fields())
+    for (String fldname : p1.schema().fields())
       System.out.println("V(p1, " + fldname + "): " + p1.distinctValues(fldname));
+
+    // Select node
+    System.out.println("10.1.2. SelectPlan-------------");
+    t = new Term(new Expression("A"), new Expression(new Constant(5)));
+    pred = new Predicate(t);
+    Plan p2 = new SelectPlan(p1, pred);
+    System.out.println("R(p2): " + p2.recordsOutput());
+    System.out.println("B(p2): " + p2.blockAccessed());
+    for (String fldname : p2.schema().fields())
+      System.out.println("V(p2, " + fldname + "): " + p1.distinctValues(fldname));
 
     tx.commit();
   }
