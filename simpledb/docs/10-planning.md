@@ -517,6 +517,200 @@
 ### 10.2. Planner
 
 #### 10.2.1 BasicQueryPlanner
+
+1. Add `QueryPlanner` interface. (`plan/QueryPlanner.java`)
+
+    ```java
+    package simpledb.plan;
+
+    import simpledb.parse.QueryData;
+    import simpledb.tx.Transaction;
+
+    /*
+     * Interface implemented by planners for
+     * the SQL select statement.
+     */
+    public interface QueryPlanner {
+      public Plan createPlan(QueryData data, Transaction tx);
+    }
+    ```
+
+1. Add `plan/BasicQueryPlanner.java`
+
+    ```java
+    package simpledb.plan;
+
+    import java.util.ArrayList;
+    import java.util.List;
+
+    import simpledb.metadata.MetadataMgr;
+    import simpledb.parse.Parser;
+    import simpledb.parse.QueryData;
+    import simpledb.tx.Transaction;
+
+    /*
+     * Simplest and most naive query planner
+     */
+    public class BasicQueryPlanner implements QueryPlanner {
+      private MetadataMgr mdm;
+
+      public BasicQueryPlanner(MetadataMgr mdm) {
+        this.mdm = mdm;
+      }
+
+      @Override
+      public Plan createPlan(QueryData data, Transaction tx) {
+        // Step 1: Create a plan for each mentioned table or view.
+        List<Plan> plans = new ArrayList<>();
+        for (String tblname : data.tables()) {
+          String viewdef = mdm.getViewDef(tblname, tx);
+          if (viewdef != null) {
+            Parser parser = new Parser(viewdef);
+            QueryData viewData = parser.query();
+            plans.add(createPlan(viewData, tx));
+          } else
+            plans.add(new TablePlan(tx, tblname, mdm));
+        }
+
+        // Step 2: Create product of all table plans
+        // ProductPlan(...ProductPlan(ProductPlan(p0, p1), p2, p3,...)
+        // The order is arbitrary as tables() returns Collection<String>
+        Plan p = plans.remove(0);
+        for (Plan nextplan : plans)
+          p = new ProductPlan(p, nextplan);
+
+        // Step 3: Add a select plan for the predicate
+        p = new SelectPlan(p, data.predicate());
+
+        // Step 4: Project on the field names
+        p = new ProjectPlan(p, data.fields());
+        return p;
+      }
+    }
+    ```
+
+1. Add mockito to `app/build.gradle.kts`
+
+    ```diff
+    dependencies {
+    +    // mockito
+    +    testImplementation("org.mockito:mockito-core:3.6.0")
+    +
+    +    // mockito JUnit 5 Extension
+    +    testImplementation("org.mockito:mockito-junit-jupiter:3.6.0")
+    }
+    ```
+
+1. Add test `plan/BasicQueryPlannertest.java`
+    ```java
+    package simpledb.plan;
+
+    import static org.junit.jupiter.api.Assertions.assertEquals;
+    import static org.junit.jupiter.api.Assertions.assertTrue;
+    import static org.mockito.Mockito.when;
+
+    import java.util.Arrays;
+
+    import org.junit.jupiter.api.Test;
+    import org.junit.jupiter.api.extension.ExtendWith;
+    import org.mockito.Mock;
+    import org.mockito.junit.jupiter.MockitoExtension;
+
+    import simpledb.metadata.MetadataMgr;
+    import simpledb.metadata.StatInfo;
+    import simpledb.parse.QueryData;
+    import simpledb.query.Constant;
+    import simpledb.query.Expression;
+    import simpledb.query.Predicate;
+    import simpledb.query.Term;
+    import simpledb.record.Layout;
+    import simpledb.record.Schema;
+
+    @ExtendWith(MockitoExtension.class)
+    public class BasicQueryPlannerTest {
+
+      @Mock
+      private MetadataMgr mdm;
+
+      /*
+       * Test case of SQL: select fld1 from tbl1 where fld1 = 1
+       * ProjectPlan(SelectPlan(TablePlan(tx, "tbl1", mdm), pred), fields)
+       */
+      @Test
+      public void testSingleTable() {
+        Schema sch = new Schema();
+        sch.addIntField("fld1");
+        Layout layout = new Layout(sch);
+        StatInfo si = new StatInfo(10, 100);
+        when(mdm.getViewDef("tbl1", null)).thenReturn(null);
+        when(mdm.getLayout("tbl1", null)).thenReturn(layout);
+        when(mdm.getStatInfo("tbl1", layout, null)).thenReturn(si);
+
+        BasicQueryPlanner basicQueryPlanner = new BasicQueryPlanner(mdm);
+        Term term = new Term(new Expression("fld1"), new Expression(new Constant(1)));
+        Predicate pred = new Predicate(term);
+        QueryData qd = new QueryData(Arrays.asList("fld1"), Arrays.asList("tbl1"), pred);
+        Plan plan = basicQueryPlanner.createPlan(qd, null);
+
+        assertTrue(plan instanceof ProjectPlan);
+        assertEquals(1, plan.schema().fields().size()); // fld1
+        assertEquals(10, plan.blockAccessed()); // from StatInfo
+        assertEquals(2, plan.recordsOutput());
+        // TablePlan.recordsOutput / pred.reductionFactor(tableplan) = numRecs /
+        // term.reductionFactor = tableplan.distinctValues(fld1) =
+        // statinfo.distinctvalues(fld1)
+        // 100 / (1 + (100 / 3)) = 2.91 -> 2
+        assertEquals(1, plan.distinctValues("fld1")); // the result only contains fld1=1
+      }
+
+      /*
+       * Test case of SQL: select fld1 from tbl1, tbl2 where fld1 = fld2
+       * ProjectPlan(SelectPlan(Product(TablePlan(tx, "tbl1", mdm), TablePlan(tx,
+       * "tbl2", mdm)), pred), fields)
+       */
+      @Test
+      public void testMultipleTables() {
+        Schema sch1 = new Schema();
+        sch1.addIntField("fld1");
+        Layout layout1 = new Layout(sch1);
+        Schema sch2 = new Schema();
+        sch1.addIntField("fld2");
+        Layout layout2 = new Layout(sch2);
+        StatInfo si1 = new StatInfo(10, 100);
+        StatInfo si2 = new StatInfo(30, 900);
+        when(mdm.getViewDef("tbl1", null)).thenReturn(null);
+        when(mdm.getLayout("tbl1", null)).thenReturn(layout1);
+        when(mdm.getStatInfo("tbl1", layout1, null)).thenReturn(si1);
+        when(mdm.getViewDef("tbl2", null)).thenReturn(null);
+        when(mdm.getLayout("tbl2", null)).thenReturn(layout2);
+        when(mdm.getStatInfo("tbl2", layout2, null)).thenReturn(si2);
+
+        BasicQueryPlanner basicQueryPlanner = new BasicQueryPlanner(mdm);
+        Term term = new Term(new Expression("fld1"), new Expression("fld2"));
+        Predicate pred = new Predicate(term);
+        QueryData qd = new QueryData(Arrays.asList("fld1", "fld2"), Arrays.asList("tbl1", "tbl2"), pred);
+        Plan plan = basicQueryPlanner.createPlan(qd, null);
+
+        assertTrue(plan instanceof ProjectPlan);
+        assertEquals(2, plan.schema().fields().size()); // fld1, fld2
+        assertEquals(3010, plan.blockAccessed()); // ProductPlan.blockaccessed() = B(t1) + R(t1) * B(t2) = 10 + 100 * 30
+
+        assertEquals(2647, plan.recordsOutput());
+        // R(ProductPlan) / pred.reductionFactor(productplan)
+        // P(ProductPlan): R(t1) * R(t2) = 90000
+        // pred.reductionFactor(productplan): Min(V(t1, "fld1"), V(t2, "fld2")) =
+        // Min(34.3, 301) = 34
+        // 90000 / 34 = 2647
+        // int expectedRecordOutput = si1.recordsOutput() * si2.recordsOutput() /
+        // Math.min(si1.distinctValues("fld1"), si2.distinctValues("fld2")));
+
+        int minDistinctVal = Math.min(si2.distinctValues("fld2"), si1.distinctValues("fld1"));
+        assertEquals(minDistinctVal, plan.distinctValues("fld1"));
+        assertEquals(minDistinctVal, plan.distinctValues("fld2"));
+      }
+    }
+    ```
+
 #### 10.2.2. BasicUpdatePlanner
 #### 10.2.3. QueryPlanner
 #### 10.2.4. UpdatePlanner
