@@ -1,4 +1,4 @@
-<svg host="65bd71144e" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="831px" height="61px" viewBox="-0.5 -0.5 831 61" content="&lt;mxfile&gt;&lt;diagram id=&quot;YgYdM7MmwurEsz79FHMO&quot; name=&quot;Page-1&quot;&gt;1ZdLj5swFIV/DXsb89xOZtouWqkjFl27+AZQDY6MCUl/fU0wr5pIlQaBukns4+vY5+TDwg45lbfPkl7yb4IBd1zEbg55dVzXQ4H+7IR7L/gB7oVMFqyXZkJS/AYjIqM2BYN6UaiE4Kq4LMVUVBWkaqFRKUW7LDsLvlz1QjOwhCSl3FZ/FEzlvRr5aNK/QJHlw8oYmZGSDsVGqHPKRDuTyJtDTlII1bfK2wl4l92QSz/v05PRcWMSKvUvE7x+wpXyxngz+1L3wSww7d10K1Hpr5dclVz3sG725V3N0x0YqRaNTE2VWUVRmYGpIqN7TQ2IEpS86xIJnKriuvx1av6/bKybLOqGcbnu2LUcJ+9ftZAoqqDsNv13AFI0FYNuOtKG27xQkFzow0qr8V7mcS44Pwku5GMuYSgF0L5eaiXFL5iN+IGPQxgTXAnsClLBbSbZ6ZjRwNBkHifsmX47wYkH4vIZmMO8j+QZHEMQsQnydyKIWI6/U1mD3BScn5ixM1oDB6OQxBM4FiUr0T0FZzxRjyAnOoYc3yYn3Ikc33L83sBjqVeq6DEHz4f4If6B/Azs7g1QaAMU7wRQaB89nOp3nI3PHgQEgjV2EEQoirZhx4uPZMd+DdiFndhmBz+JaXN44lV4/sNTJyBHkoOtGPXNYNsYz5TFzF+LkYKHibtNjGG4X4y6O11qHmOzmyF5+wM=&lt;/diagram&gt;&lt;/mxfile&gt;">
+<svg host="65bd71144e" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="831px" height="61px" viewBox="-0.5 -0.5 831 61" content="&lt;mxfile&gt;&lt;diagram id=&quot;YgYdM7MmwurEsz79FHMO&quot; name=&quot;Page-1&quot;&gt;1ZdNj5swEIZ/Ta6VjcPXdZPt9tBKu8qh26OLJ4DW4Mg4CemvrwnmqyZSVRCol8Tzehw8bx4GvCG7rHyR9JR8Ewz4xkGs3JD9xnG2yNWflXCrBRJ4tRDLlNUS7oRD+guMiIx6ThkUg0QlBFfpaShGIs8hUgONSimuw7Sj4MOrnmgMlnCIKLfV7ylTSa0GLur0L5DGSXNljMxMRptkIxQJZeLak8jzhuykEKoeZeUOeOVd40u97vOD2XZjEnL1Nwu29YIL5WdTm9mXujXFAtO1mzAXuf56SlTGdYT1sE6vch7uwEiFOMvIZJmrKCpjMFmkrV5TAyIDJW86RQKnKr0Mf52a/y9u87oS9cBUOV6xY1V8ePuqhYOiCrJq038aIMU5Z1AtR7rga5IqOJzovZSrxnvoxzHlfCe4kPe1hKEIQNf1VCgpPqA343ou9qF1cMSwC0gFZU+y3TGznqHJ3E54a+JrByduiEt6YDbrpvjpTSVIly1v78bde/CjCj65Tbgv+5P7m4n+jTxik+cuRB6xnHqlsgA5K3A/MWNHNAYcRj4JO+Asukasewhc24nXIC5Yp2e5Njn+QuS4VsVvZ9C3AlV0nW41CR7irghPA+6EflWm6r037nUrHXXNqgqm9SrfJi5ciDh/nLhXTvUb1cwdCwEBbww6BAEKgnmg24ZrQme/dCzSskIbIPzAptkJCu2nnYbnP2xXHlmTHGzZqM8h89p4pCxk7piNFLaYOPPY6PvL2ajD7gh1n+udQ8nzbw==&lt;/diagram&gt;&lt;/mxfile&gt;">
     <defs/>
     <g>
         <path d="M 120 30 L 143.63 30" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/>
@@ -48,13 +48,13 @@
                     <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 118px; height: 1px; padding-top: 30px; margin-left: 291px;">
                         <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
                             <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">
-                                Query Data
+                                QueryData
                             </div>
                         </div>
                     </div>
                 </foreignObject>
                 <text x="350" y="34" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">
-                    Query Data
+                    QueryData
                 </text>
             </switch>
         </g>
@@ -67,13 +67,13 @@
                     <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 118px; height: 1px; padding-top: 30px; margin-left: 431px;">
                         <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
                             <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">
-                                Planner
+                                QueryPlanner
                             </div>
                         </div>
                     </div>
                 </foreignObject>
                 <text x="490" y="34" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">
-                    Planner
+                    QueryPlanner
                 </text>
             </switch>
         </g>

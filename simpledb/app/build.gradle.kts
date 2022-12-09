@@ -20,6 +20,12 @@ dependencies {
     // Use JUnit Jupiter for testing.
     testImplementation("org.junit.jupiter:junit-jupiter:5.8.2")
 
+    // mockito
+    testImplementation("org.mockito:mockito-core:3.6.0")
+
+    // mockito JUnit 5 Extension
+    testImplementation("org.mockito:mockito-junit-jupiter:3.6.0")
+
     // This dependency is used by the application.
     implementation("com.google.guava:guava:31.0.1-jre")
 }
