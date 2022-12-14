@@ -6,7 +6,8 @@ import simpledb.file.BlockId;
 import simpledb.tx.Transaction;
 
 public class RecordPage {
-  public static final int EMPTY = 0, USED = 1;
+  public static final int EMPTY = 0;
+  public static final int USED = 1;
   private Transaction tx;
   private BlockId blk;
   private Layout layout;

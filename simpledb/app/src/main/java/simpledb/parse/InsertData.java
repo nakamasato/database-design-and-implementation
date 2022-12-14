@@ -9,6 +9,10 @@ public class InsertData {
   private List<String> flds;
   private List<Constant> vals;
 
+  /*
+   * Insert one record
+   * the length of flds and vals must be the same
+   */
   public InsertData(String tblname, List<String> flds, List<Constant> vals) {
     this.tblname = tblname;
     this.flds = flds;
