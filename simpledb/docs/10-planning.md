@@ -589,18 +589,6 @@
     }
     ```
 
-1. Add mockito to `app/build.gradle.kts`
-
-    ```diff
-    dependencies {
-    +    // mockito
-    +    testImplementation("org.mockito:mockito-core:3.6.0")
-    +
-    +    // mockito JUnit 5 Extension
-    +    testImplementation("org.mockito:mockito-junit-jupiter:3.6.0")
-    }
-    ```
-
 1. Add test `plan/BasicQueryPlannertest.java`
     ```java
     package simpledb.plan;
@@ -712,5 +700,7 @@
     ```
 
 #### 10.2.2. BasicUpdatePlanner
+
+
 #### 10.2.3. QueryPlanner
 #### 10.2.4. UpdatePlanner

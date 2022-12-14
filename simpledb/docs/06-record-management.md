@@ -154,7 +154,8 @@
     import simpledb.tx.Transaction;
 
     public class RecordPage {
-      public static final int EMPTY = 0, USED = 1;
+      public static final int EMPTY = 0;
+      public static final int USED = 1;
       private Transaction tx;
       private BlockId blk;
       private Layout layout;
@@ -1047,6 +1048,17 @@
   1. `TableScan` manages records in a table by keeping the track of a *current record*
       1. `TableScan` hides the block structure from its client, while `Page`, `Buffer`, `Transaction`, `RecordPage` all apply to a particular block.
   1. `RID` *record identifier* is used to identify a record, which contains `blockNumber` and `slot`
+  1. `TableScan.next()`: get the next used slot in the block.
+      1. call `currentslot = rp.NextUsedSlot(currentslot)`
+      1. call `searchAfter(slot, USED)`
+      1. searchAfter:
+          1. `slot++`: increment slot
+          1. keep incrementing slot while slot is valid until the flag matches the specified flag. return the slot.
+          1. if encountering invalid slot, return -1.
+      1. isValidSlot(slot):
+          1. `offset(slot + 1) <= tx.blockSize()`: check if the slot fits in the block
+          1. `offset(slot)`: slot * slotsize
+      1. If the currentslot from rp.NextUsedSlot is -1, check if it's at the last block, if so return false.
 1. Create `query/Constant.java`
 
     ```java
