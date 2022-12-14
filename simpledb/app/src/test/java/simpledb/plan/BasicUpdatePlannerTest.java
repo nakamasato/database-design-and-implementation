@@ -1,7 +1,5 @@
 package simpledb.plan;
 
-import static java.sql.Types.INTEGER;
-import static java.sql.Types.VARCHAR;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -16,7 +14,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import simpledb.file.BlockId;
 import simpledb.metadata.MetadataMgr;
 import simpledb.metadata.StatInfo;
-import simpledb.metadata.TableMgr;
 import simpledb.parse.CreateIndexData;
 import simpledb.parse.CreateTableData;
 import simpledb.parse.CreateViewData;
@@ -173,73 +170,15 @@ public class BasicUpdatePlannerTest {
    */
   @Test
   public void testCreateTable() {
-    int blockSize = 480; // 8 slots * 56 slotsize = 448 < 450
     Schema sch = new Schema();
     sch.addIntField("fld1");
     sch.addStringField("fld2", 10);
-    Layout layout = new Layout(sch);
-    int slotsize = layout.slotSize(); // slotsize = 22 (4 for flag, 4 for an int field, 4 + 10 for a string field)
-    assertEquals(22, slotsize);
 
-    when(tx.size("tblcat.tbl")).thenReturn(1);
-    when(tx.size("fldcat.tbl")).thenReturn(1);
-    when(tx.blockSize()).thenReturn(blockSize);
-
-    // table catalog table
-    slotsize = 28;
-    int slot = 0;
-    when(tx.getInt(new BlockId("tblcat.tbl", 0), slot * slotsize)).thenReturn(RecordPage.USED); // flag
-    when(tx.getString(new BlockId("tblcat.tbl", 0), slot * slotsize + 4)).thenReturn(TableMgr.TBL_CAT_TABLE); // tblname
-    when(tx.getInt(new BlockId("tblcat.tbl", 0), slot * slotsize + 24)).thenReturn(28); // slotsize (4+4+16)
-
-    // field catalog table
-    slotsize = 56;
-    slot = 0;
-    when(tx.getInt(new BlockId("fldcat.tbl", 0), slot * slotsize + 0)).thenReturn(RecordPage.USED); // flag
-    when(tx.getString(new BlockId("fldcat.tbl", 0), slot * slotsize + 4)).thenReturn(TableMgr.TBL_CAT_TABLE); // tablename
-    when(tx.getString(new BlockId("fldcat.tbl", 0), slot * slotsize + 24)).thenReturn("tblname"); // fldname
-    when(tx.getInt(new BlockId("fldcat.tbl", 0), slot * slotsize + 44)).thenReturn(VARCHAR); // type
-    when(tx.getInt(new BlockId("fldcat.tbl", 0), slot * slotsize + 48)).thenReturn(16); // length
-    when(tx.getInt(new BlockId("fldcat.tbl", 0), slot * slotsize + 52)).thenReturn(4); // offset
-    slot = 1;
-    when(tx.getInt(new BlockId("fldcat.tbl", 0), slot * slotsize + 0)).thenReturn(RecordPage.USED);
-    when(tx.getString(new BlockId("fldcat.tbl", 0), slot * slotsize + 4)).thenReturn(TableMgr.TBL_CAT_TABLE); // tablename
-    when(tx.getString(new BlockId("fldcat.tbl", 0), slot * slotsize + 24)).thenReturn("slotsize"); // fldname
-    when(tx.getInt(new BlockId("fldcat.tbl", 0), slot * slotsize + 44)).thenReturn(INTEGER); // type
-    when(tx.getInt(new BlockId("fldcat.tbl", 0), slot * slotsize + 48)).thenReturn(0); // length
-    when(tx.getInt(new BlockId("fldcat.tbl", 0), slot * slotsize + 52)).thenReturn(24); // offset
-    slot = 2;
-    when(tx.getInt(new BlockId("fldcat.tbl", 0), slot * slotsize + 0)).thenReturn(RecordPage.USED); // flag
-    when(tx.getString(new BlockId("fldcat.tbl", 0), slot * slotsize + 4)).thenReturn("fldcat"); // tblname
-    slot = 3;
-    when(tx.getInt(new BlockId("fldcat.tbl", 0), slot * slotsize + 0)).thenReturn(RecordPage.USED); // flag
-    when(tx.getString(new BlockId("fldcat.tbl", 0), slot * slotsize + 4)).thenReturn("fldcat"); // tblname
-    slot = 4;
-    when(tx.getInt(new BlockId("fldcat.tbl", 0), slot * slotsize)).thenReturn(RecordPage.USED); // flag
-    when(tx.getString(new BlockId("fldcat.tbl", 0), slot * slotsize + 4)).thenReturn("fldcat"); // tblname
-    slot = 5;
-    when(tx.getInt(new BlockId("fldcat.tbl", 0), slot * slotsize)).thenReturn(RecordPage.USED); // flag
-    when(tx.getString(new BlockId("fldcat.tbl", 0), slot * slotsize + 4)).thenReturn("fldcat"); // tblname
-    slot = 6;
-    when(tx.getInt(new BlockId("fldcat.tbl", 0), slot * slotsize)).thenReturn(RecordPage.USED); // flag
-    when(tx.getString(new BlockId("fldcat.tbl", 0), slot * slotsize + 4)).thenReturn("fldcat"); // tblname
-
-    MetadataMgr mdm = new MetadataMgr(false, tx);
     BasicUpdatePlanner basicUpdatePlanner = new BasicUpdatePlanner(mdm);
     CreateTableData data = new CreateTableData("tbl1", sch);
     basicUpdatePlanner.executeCreateTable(data, tx);
 
-    // tblcat
-    verify(tx).setInt(new BlockId("tblcat.tbl", 0), 28 * 1, RecordPage.USED, true);
-    verify(tx).setString(new BlockId("tblcat.tbl", 0), 28 * 1 + 4, "tbl1", true);
-    verify(tx).setInt(new BlockId("tblcat.tbl", 0), 28 * 1 + 4 + 20, 22, true);
-    // fldcat
-    verify(tx).setInt(new BlockId("fldcat.tbl", 0), 56 * 7, RecordPage.USED, true);
-    verify(tx).setString(new BlockId("fldcat.tbl", 0), 56 * 7 + 4, "tbl1", true); // tblname
-    verify(tx).setString(new BlockId("fldcat.tbl", 0), 56 * 7 + 24, "fld1", true); // fldname
-    verify(tx).setInt(new BlockId("fldcat.tbl", 0), 56 * 7 + 44, INTEGER, true); // type
-    verify(tx).setInt(new BlockId("fldcat.tbl", 0), 56 * 7 + 48, 0, true); // length
-    verify(tx).setInt(new BlockId("fldcat.tbl", 0), 56 * 7 + 52, 4, true); // offset
+    verify(mdm).createTable("tbl1", sch, tx);
   }
 
   /*
