@@ -17,10 +17,13 @@ import simpledb.file.BlockId;
 import simpledb.metadata.MetadataMgr;
 import simpledb.metadata.StatInfo;
 import simpledb.metadata.TableMgr;
+import simpledb.parse.CreateIndexData;
 import simpledb.parse.CreateTableData;
+import simpledb.parse.CreateViewData;
 import simpledb.parse.DeleteData;
 import simpledb.parse.InsertData;
 import simpledb.parse.ModifyData;
+import simpledb.parse.QueryData;
 import simpledb.query.Constant;
 import simpledb.query.Expression;
 import simpledb.query.Predicate;
@@ -237,5 +240,32 @@ public class BasicUpdatePlannerTest {
     verify(tx).setInt(new BlockId("fldcat.tbl", 0), 56 * 7 + 44, INTEGER, true); // type
     verify(tx).setInt(new BlockId("fldcat.tbl", 0), 56 * 7 + 48, 0, true); // length
     verify(tx).setInt(new BlockId("fldcat.tbl", 0), 56 * 7 + 52, 4, true); // offset
+  }
+
+  /*
+   * SQL: create view viewname as select fld1 from tbl1 where fld1 = 1;
+   */
+  @Test
+  public void testCreateView() {
+    BasicUpdatePlanner basicUpdatePlanner = new BasicUpdatePlanner(mdm);
+    Term term = new Term(new Expression("fld1"), new Expression(new Constant(1)));
+    Predicate pred = new Predicate(term);
+    QueryData queryData = new QueryData(Arrays.asList("fld1"), Arrays.asList("tbl1"), pred);
+    CreateViewData data = new CreateViewData("viewname", queryData);
+    basicUpdatePlanner.executeCreateView(data, tx);
+
+    verify(mdm).createView("viewname", data.viewDef(), tx);
+  }
+
+  /*
+   * SQL: create index test_idx on tbl1(fld1)
+   */
+  @Test
+  public void testCreateIndex() {
+    BasicUpdatePlanner basicUpdatePlanner = new BasicUpdatePlanner(mdm);
+    CreateIndexData data = new CreateIndexData("test_idx", "tbl1", "fld1");
+    basicUpdatePlanner.executeCreateIndex(data, tx);
+
+    verify(mdm).createIndex("test_idx", "tbl1", "fld1", tx);
   }
 }

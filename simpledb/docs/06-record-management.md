@@ -1049,6 +1049,7 @@
       1. `TableScan` hides the block structure from its client, while `Page`, `Buffer`, `Transaction`, `RecordPage` all apply to a particular block.
   1. `RID` *record identifier* is used to identify a record, which contains `blockNumber` and `slot`
   1. `TableScan.next()`: get the next used slot in the block.
+      ![](tablescan-logic.drawio.svg)
       1. call `currentslot = rp.NextUsedSlot(currentslot)`
       1. call `searchAfter(slot, USED)`
       1. searchAfter:

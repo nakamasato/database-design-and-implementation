@@ -31,6 +31,9 @@ public class TableScan implements UpdateScan {
     moveToBlock(0);
   }
 
+  /*
+   * return true unless the last block is reached.
+   */
   @Override
   public boolean next() {
     currentslot = rp.nextUsedSlot(currentslot);
