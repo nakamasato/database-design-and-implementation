@@ -85,6 +85,10 @@ public class FileMgr {
     }
   }
 
+  public boolean isNew() {
+    return isNew;
+  }
+
   public int blockSize() {
     return blocksize;
   }
