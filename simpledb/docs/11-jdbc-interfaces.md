@@ -1,6 +1,6 @@
-## JDBC interfaces
+## Chapter 11: JDBC Interfaces
 
-### SimpleDB
+### 11.1. SimpleDB
 
 1. Create `SimpleDB.java`
 
