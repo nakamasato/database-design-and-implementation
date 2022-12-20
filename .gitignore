@@ -9,3 +9,4 @@ build
 simpledb/app/bin
 datadir
 .vscode
+.class
