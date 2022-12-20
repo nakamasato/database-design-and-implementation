@@ -95,3 +95,7 @@
       return isNew;
     }
     ```
+
+### 11.2. Remote Method Invoction (RMI)
+
+You can practice with a quick start in [RMI](../../rmi/README.md).
