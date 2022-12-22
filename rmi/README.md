@@ -1,4 +1,4 @@
-# RMI
+# [RMI](https://docs.oracle.com/en/java/javase/19/docs/specs/rmi/index.html)
 
 ## QuickStart
 

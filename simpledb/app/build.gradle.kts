@@ -39,3 +39,15 @@ tasks.named<Test>("test") {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
 }
+
+task("startServer", JavaExec::class) {
+    group = "jdbc"
+    main = "simpledb.server.StartServer"
+    classpath = sourceSets["main"].runtimeClasspath
+}
+
+task("client", JavaExec::class) {
+    group = "jdbc"
+    main = "simpledb.client.network.JdbcClientExample"
+    classpath = sourceSets["main"].runtimeClasspath
+}
