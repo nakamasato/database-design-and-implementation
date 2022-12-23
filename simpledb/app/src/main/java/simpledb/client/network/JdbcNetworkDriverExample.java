@@ -8,7 +8,7 @@ import java.sql.Statement;
 
 import simpledb.jdbc.network.NetworkDriver;
 
-public class JdbcClientExample {
+public class JdbcNetworkDriverExample {
   public static void main(String[] args) {
     Driver d = new NetworkDriver();
     String url = "jdbc:simpledb://localhost";

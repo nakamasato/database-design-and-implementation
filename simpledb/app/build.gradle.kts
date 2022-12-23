@@ -46,8 +46,14 @@ task("startServer", JavaExec::class) {
     classpath = sourceSets["main"].runtimeClasspath
 }
 
-task("client", JavaExec::class) {
+task("networkclient", JavaExec::class) {
     group = "jdbc"
-    main = "simpledb.client.network.JdbcClientExample"
+    main = "simpledb.client.network.JdbcNetworkDriverExample"
+    classpath = sourceSets["main"].runtimeClasspath
+}
+
+task("embeddedclient", JavaExec::class) {
+    group = "jdbc"
+    main = "simpledb.client.network.JdbcEmbeddedDriverExample"
     classpath = sourceSets["main"].runtimeClasspath
 }

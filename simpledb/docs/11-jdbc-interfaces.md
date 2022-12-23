@@ -369,7 +369,7 @@ Requires `NetworkConnection`
 1. Add `jdbc/network/RemoteMetaDataImpl.java`
 #### 11.3.6. Client
 
-1. Add `client/network/JdbcClientExample.java`
+1. Add `client/network/JdbcNetworkDriverExample.java`
 
     ```java
     package simpledb.client.network;
@@ -382,7 +382,7 @@ Requires `NetworkConnection`
 
     import simpledb.jdbc.network.NetworkDriver;
 
-    public class JdbcClientExample {
+    public class JdbcNetworkDriverExample {
       public static void main(String[] args) {
         Driver d = new NetworkDriver();
         String url = "jdbc:simpledb://localhost";
@@ -426,9 +426,9 @@ Requires `NetworkConnection`
         classpath = sourceSets["main"].runtimeClasspath
     }
 
-    task("client", JavaExec::class) {
+    task("networkclient", JavaExec::class) {
         group = "jdbc"
-        main = "simpledb.client.network.JdbcClientExample"
+        main = "simpledb.client.network.JdbcNetworkDriverExample"
         classpath = sourceSets["main"].runtimeClasspath
     }
     ```
@@ -441,7 +441,7 @@ Requires `NetworkConnection`
 1. Run client
 
     ```
-    ./gradlew client
+    ./gradlew networkclient
     ```
 
     ```
@@ -450,6 +450,81 @@ Requires `NetworkConnection`
     table: viewcat, slotsize: 128
     table: student, slotsize: 30
     Sid: 1, Sname: John, MajorId: 10, GradYear: 2020
+    ```
+
+### 11.4. EmbeddedDriver
+
+#### 11.4.1. Add five implementations
+1. Add `java/jdbc/embedded/EmbeddedDriver.java`
+1. Add `java/jdbc/embedded/EmbeddedConnection.java`
+1. Add `java/jdbc/embedded/EmbeddedStatement.java`
+1. Add `java/jdbc/embedded/EmbeddedResultSet.java`
+1. Add `java/jdbc/embedded/EmbeddedMetaData.java`
+
+#### 11.4.2. Add client
+
+`java/client/network/JdbcEmbeddedDriverExample.java`
+
+```java
+package simpledb.client.network;
+
+import java.sql.Connection;
+import java.sql.Driver;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+
+import simpledb.jdbc.embedded.EmbeddedDriver;
+
+public class JdbcEmbeddedDriverExample {
+  public static void main(String[] args) {
+    Driver d = new EmbeddedDriver();
+    String url = "jdbc:simpledb:datadir";
+    try (Connection conn = d.connect(url, null);
+        Statement stmt = conn.createStatement()) {
+      // 1. create table student
+      String sql = "create table STUDENT (Sid int, SName varchar(10), MajorId int, GradYear int)";
+      stmt.executeUpdate(sql);
+
+      // 2. select tables
+      sql = "select tblname, slotsize from tblcat";
+      ResultSet rs = stmt.executeQuery(sql);
+      while (rs.next())
+        System.out.println(String.format("table: %s, slotsize: %d", rs.getString("tblname"), rs.getInt("slotsize")));
+
+      // 3. insert record to student table
+      sql = "insert into student(Sid, SName, MajorId, GradYear) values (1, 'John', 10, 2020)";
+      stmt.executeUpdate(sql);
+
+      // 4. select records from student table
+      sql = "select Sid, SName, MajorId, GradYear from student";
+      rs = stmt.executeQuery(sql);
+      while (rs.next())
+        System.out.println(String.format("Sid: %d, Sname: %s, MajorId: %d, GradYear: %d", rs.getInt("Sid"),
+            rs.getString("SName"), rs.getInt("MajorId"), rs.getInt("GradYear")));
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+  }
+}
+```
+
+#### 11.4.2. Run
+
+1. Add Gradle task to `build.gradle.kts`
+
+    ```kts
+    task("embeddedclient", JavaExec::class) {
+        group = "jdbc"
+        main = "simpledb.client.network.JdbcEmbeddedDriverExample"
+        classpath = sourceSets["main"].runtimeClasspath
+    }
+    ```
+
+1. Run client
+
+    ```
+    ./gradlew embeddedclient
     ```
 
 ### Error

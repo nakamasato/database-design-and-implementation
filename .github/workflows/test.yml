@@ -18,8 +18,6 @@ jobs:
 
       - name: setup gradle
         uses: gradle/gradle-build-action@v2
-        # with:
-        #   gradle-version: 7.5
 
       - name: test
         working-directory: simpledb
@@ -28,3 +26,9 @@ jobs:
       - name: run
         working-directory: simpledb
         run: ./gradlew run
+
+      - name: embeddedclient
+        working-directory: simpledb
+        run: |
+          rm -rf app/datadir
+          ./gradlew embeddedclient
