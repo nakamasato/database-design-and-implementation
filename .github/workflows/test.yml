@@ -29,4 +29,6 @@ jobs:
 
       - name: embeddedclient
         working-directory: simpledb
-        run: ./gradlew embeddedclient
+        run: |
+          rm -rf datadir
+          ./gradlew embeddedclient
