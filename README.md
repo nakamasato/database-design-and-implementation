@@ -19,7 +19,7 @@
 1. [Chapter 9: Parsing](simpledb/docs/09-parsing.md)
 1. [Chapter 10: Planning](simpledb/docs/10-planning.md)
 1. [Chapter 11: JDBC Interfaces](simpledb/docs/11-jdbc-interfaces.md)
-1. Chapter 12: Indexing
+1. [Chapter 12: Indexing](simpledb/docs/12-indexing.md)
 1. Chapter 13: Materialization and Sorting
 1. Chpater 14: Effective Buffer Utilization
 1. Chapter 15: Query Optimization
@@ -29,3 +29,4 @@
 
 1. [Derby Database System](docs/01-database-systems/02-derbydatabase-system)
 1. [SimpleDB](docs/01-database-systems/04-simpledb/README.md)
+1. [RMI](rmi/README.md)
