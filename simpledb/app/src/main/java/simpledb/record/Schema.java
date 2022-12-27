@@ -29,6 +29,9 @@ public class Schema {
     addField(fldname, VARCHAR, length);
   }
 
+  /*
+   * add existing schema's field to this shema
+   */
   public void add(String fldname, Schema schema) {
     int type = schema.type(fldname);
     int length = schema.length(fldname);
