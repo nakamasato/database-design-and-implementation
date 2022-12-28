@@ -126,6 +126,8 @@ public class BTPage {
     setInt(slot, FLD_NAME_BLOCK, blknum);
   }
 
+  // Methods called only by BTreeLeaf
+
   public RID getDataRid(int slot) {
     return new RID(getInt(slot, FLD_NAME_BLOCK), getInt(slot, FLD_NAME_ID));
   }
