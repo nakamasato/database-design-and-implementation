@@ -25,10 +25,11 @@ public class IndexMgr {
       sch.addStringField(IDX_CAT_FIELD_INDEX_NAME, MAX_NAME);
       sch.addStringField(IDX_CAT_FIELD_TABLE_NAME, MAX_NAME);
       sch.addStringField(IDX_CAT_FIELD_FIELD_NAME, MAX_NAME);
+      tblmgr.createTable(IDX_CAT_TABLE_NAME, sch, tx);
     }
     this.tblmgr = tblmgr;
     this.statmgr = statmgr;
-    layout = tblmgr.getLayout(IDX_CAT_FIELD_TABLE_NAME, tx);
+    layout = tblmgr.getLayout(IDX_CAT_TABLE_NAME, tx);
   }
 
   public void creatIndex(String idxname, String tblname, String fldname, Transaction tx) {

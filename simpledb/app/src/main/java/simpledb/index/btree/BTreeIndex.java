@@ -27,6 +27,7 @@ public class BTreeIndex implements Index {
     leaftbl = idxname + "leaf";
     this.leafLayout = leafLayout;
     if (tx.size(leaftbl) == 0) {
+      System.out.println("[BTreeIndex] leaftbl is empty");
       BlockId blk = tx.append(leaftbl);
       BTPage node = new BTPage(tx, blk, leafLayout);
       node.format(blk, -1); // -1 means no overflow block
@@ -40,6 +41,7 @@ public class BTreeIndex implements Index {
     dirLayout = new Layout(dirsch);
     rootblk = new BlockId(dirtbl, 0);
     if (tx.size(dirtbl) == 0) {
+      System.out.println("[BTreeIndex] dirtbl is empty");
       // create new root block
       tx.append(dirtbl);
       BTPage node = new BTPage(tx, rootblk, dirLayout);
@@ -85,6 +87,7 @@ public class BTreeIndex implements Index {
    */
   @Override
   public void insert(Constant dataval, RID datarid) {
+    System.out.println("[BTreeIndex] insert dataval:" + dataval.toString() + ", RID: " + datarid);
     beforeFirst(dataval);
     DirEntry e = leaf.insert(datarid);
     leaf.close();

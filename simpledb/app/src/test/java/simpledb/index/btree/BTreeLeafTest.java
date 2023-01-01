@@ -2,6 +2,7 @@ package simpledb.index.btree;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
@@ -22,6 +23,27 @@ public class BTreeLeafTest {
   private static final String filename = "testidxleaf";
   @Mock
   private Transaction tx;
+
+  /*
+   * Insert an index leaf record without splitting
+   */
+  @Test
+  public void testInsertBTreeLeafWithoutSplit() {
+    BlockId blk = new BlockId(filename, 0);
+    Schema sch = new Schema();
+    sch.addIntField("block"); // int field
+    sch.addStringField("dataval", 10); // string field
+    sch.addIntField("id"); // rid
+    Layout layout = new Layout(sch);
+    int slotsize = layout.slotSize();
+    when(tx.getInt(blk, 0)).thenReturn(-1); // flag
+    when(tx.getInt(blk, 4)).thenReturn(0); // record num
+    when(tx.blockSize()).thenReturn(slotsize * 2);
+
+    BTreeLeaf bLeaf = new BTreeLeaf(tx, blk, layout, new Constant("test1"));
+    DirEntry e = bLeaf.insert(new RID(0, 0));
+    assertNull(e);
+  }
 
   /*
    * test getDataRid() + next() with no overflow block

@@ -2,8 +2,8 @@ package simpledb.metadata;
 
 import static java.sql.Types.INTEGER;
 
-import simpledb.index.DummyIndex;
 import simpledb.index.Index;
+import simpledb.index.btree.BTreeIndex;
 import simpledb.record.Layout;
 import simpledb.record.Schema;
 import simpledb.tx.Transaction;
@@ -26,14 +26,13 @@ public class IndexInfo {
   }
 
   public Index open() {
-    // TODO: replace with a real Index class
-    return new DummyIndex(tx, idxname, idxLayout);
+    return new BTreeIndex(tx, idxname, idxLayout);
   }
 
   public int blocksAccessed() {
     int rpb = tx.blockSize() / idxLayout.slotSize();
     int numBlocks = si.recordsOutput() / rpb;
-    return DummyIndex.searchCost(numBlocks, rpb);
+    return BTreeIndex.searchCost(numBlocks, rpb);
   }
 
   /*

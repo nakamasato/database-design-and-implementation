@@ -46,6 +46,10 @@ public class MetadataMgr {
     idxmgr.creatIndex(idxname, tblname, fldname, tx);
   }
 
+  /*
+   * Return Map with field name as key and IndexInfo as value
+   * for the given table.
+   */
   public Map<String, IndexInfo> getIndexInfo(String tblname, Transaction tx) {
     return idxmgr.getIndexInfo(tblname, tx);
   }
