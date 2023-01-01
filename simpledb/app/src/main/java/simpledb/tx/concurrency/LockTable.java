@@ -33,7 +33,7 @@ public class LockTable {
     } catch (InterruptedException e) {
       throw new LockAbortException();
     }
-    // System.out.println("[LockTable] completed slock on blk " + blk.number() + ", status: " + lockStatusName(blk));
+    System.out.println("[LockTable] completed slock on blk " + blk.number() + ", status: " + lockStatusName(blk));
   }
 
   /*
