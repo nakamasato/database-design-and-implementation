@@ -305,6 +305,7 @@
         this.layout = layout;
         this.searchkey = searchkey;
         contents = new BTPage(tx, blk, layout);
+        currentslot = contents.findSlotBefore(searchkey); // move currentslot to the slot whose next slot has the search key
         filename = blk.fileName();
       }
 
