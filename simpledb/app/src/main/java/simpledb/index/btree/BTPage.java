@@ -37,6 +37,8 @@ public class BTPage {
     int slot = 0;
     while (slot < getNumRecs() && getDataVal(slot).compareTo(searchkey) < 0)
       slot++;
+
+    System.out.println("[BTPage] findSlotBefore dataval completed: " + searchkey + ", slot: " + (slot -1));
     return slot - 1;
   }
 
@@ -121,6 +123,7 @@ public class BTPage {
    * Insert a directory at the specified slot.
    */
   public void insertDir(int slot, Constant val, int blknum) {
+    System.out.println("[BTPage] insertDir slot: " + slot + ", val: " + val + ", blknum: " + blknum);
     insert(slot);
     setVal(slot, FLD_NAME_DATAVAL, val);
     setInt(slot, FLD_NAME_BLOCK, blknum);
@@ -133,6 +136,7 @@ public class BTPage {
   }
 
   public void insertLeaf(int slot, Constant val, RID rid) {
+    System.out.println("[BTPage] insertLeaf slot: " + slot + ", val: " + val + ", RID: " + rid);
     insert(slot);
     setVal(slot, FLD_NAME_DATAVAL, val);
     setInt(slot, FLD_NAME_BLOCK, rid.blockNumber());
@@ -189,6 +193,7 @@ public class BTPage {
   }
 
   private void setNumRecs(int n) {
+    System.out.println("[BTPage] setNumRecs: " + n);
     tx.setInt(currentblk, Integer.BYTES, n, true);
   }
 

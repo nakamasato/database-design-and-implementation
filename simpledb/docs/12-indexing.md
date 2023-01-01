@@ -1,6 +1,26 @@
 ## Chapter 12: Indexing
 
+### Overview
+#### SimpleDB Classes
+
+![](12-btreeindex.drawio.svg)
+
+#### Data Structure
+![](12-btreeindex-data-structure.drawio.svg)
+
+
+1. When **searching** for records with a search key, start from the root directory by comparing if the seach key and the dataval of each `DirEntry`. When finding the matching DirEntry, it'll go into the next level until it reaches the corresponding leaf block.
+1. When **inserting** a new record, same as search, find the corresponding leaf block first, and then insert the new record to the leaf.
+    1. If there's space to store the new record, just add the record to the appropriate position.
+    1. When the block is full, need to **split** a block:
+        1. if the dataval of the new record is larger than the last dataval of the block, we just need to add a new block and store the new record and return the `DirEntry` pointing to the new leaf block. The referenceing directory needs to insert the new `DirEntry` and splits the directory if it's already full.
+        1. if the dataval of the new reocrod is in the middle of the leaf, we split the block in approximately half by guaranteeing all the records with the same dataval in the same block.
+        1. if the dataval of the block is same for all slots, which means *overflow block*, add a new block referencing the overflow block and move the all records but one to the new block. In this way, it's possible to add new records to the leaf referenced by a directory.
+        1. *When you split a block, you must place all records having the same dataval in the same block*
+
 ### 12.1. B-Tree Index
+
+#### 12.2.1. Add BTreeIndex
 
 1. Create `BTPage`
     ```java
@@ -285,6 +305,7 @@
         this.layout = layout;
         this.searchkey = searchkey;
         contents = new BTPage(tx, blk, layout);
+        currentslot = contents.findSlotBefore(searchkey); // move currentslot to the slot whose next slot has the search key
         filename = blk.fileName();
       }
 
@@ -600,8 +621,109 @@
     }
     ```
 
-### 12.2. Plan & Planner
+#### 12.2.2. Use BTreeIndex
+1. Replace `DummyIndex` with `BTreeIndex` in `metadata/IndexInfo.java`.
+
+    ```java
+    public Index open() {
+      return new BTreeIndex(tx, idxname, idxLayout);
+    }
+
+    public int blocksAccessed() {
+      int rpb = tx.blockSize() / idxLayout.slotSize();
+      int numBlocks = si.recordsOutput() / rpb;
+      return BTreeIndex.searchCost(numBlocks, rpb);
+    }
+    ```
+
+    Remove `app/src/main/java/simpledb/index/DummyIndex.java`
+
+1. Add the following code to `App.java`
+
+    ```java
+    // 12 Indexing
+    System.out.println("12. Indexing-------------");
+    tx = new Transaction(fm, lm, bm);
+    metadataMgr = new MetadataMgr(false, tx);
+    sch = new Schema();
+    sch.addStringField("fld1", 10);
+    sch.addIntField("fld2");
+    metadataMgr.createTable("T3", sch, tx);
+    metadataMgr.createIndex("T3_fld1_idx", "T3", "fld1", tx);
+
+    Plan plan = new TablePlan(tx, "T3", metadataMgr);
+    Map<String, IndexInfo> indexes = metadataMgr.getIndexInfo("T3", tx);
+    IndexInfo ii = indexes.get("fld1");
+    Index idx = ii.open();
+
+    // insert 2 records into T3
+    UpdateScan us = (UpdateScan) plan.open();
+    us.beforeFirst();
+    n = 2;
+    System.out.println("Inserting " + n + " records into T3.");
+    for (int i = 0; i < n; i++) {
+      System.out.println("Inserting " + i + " into T3.");
+      us.insert();
+      us.setString("fld1", "rec" + i % 2);
+      us.setInt("fld2", i % 2);
+      // insert index record
+      Constant dataval = us.getVal("fld1");
+      RID datarid = us.getRid();
+      System.out.println("insert index " + dataval + " " + datarid);
+      idx.insert(dataval, datarid);
+    }
+
+    // Get records without index
+    us.beforeFirst();
+    while (us.next()) {
+      System.out.println("Got data from T3 without index. RID:" + us.getRid() + ", fld1: " + us.getString("fld1"));
+    }
+    us.close();
+    tx.commit(); // need to flush index to disk
+
+    // Get records where fld1 = "rec0" with index
+    us = (UpdateScan) plan.open();
+    idx = ii.open();
+    System.out.println("Get records fld1=rec0 using index ------------------------------------------");
+    idx.beforeFirst(new Constant("rec0"));
+    while (idx.next()) {
+      RID datarid = idx.getDataRid();
+      us.moveToRid(datarid);
+      System.out.println(String.format("Got data from T3 with index (rec0). RID:" + us.getRid() + ", fld1: " + us.getString("fld1")));
+    }
+    System.out.println("Get records fld1=rec1 using index ------------------------------------------");
+    idx.beforeFirst(new Constant("rec1"));
+    while (idx.next()) {
+      RID datarid = idx.getDataRid();
+      us.moveToRid(datarid);
+      System.out
+          .println(String.format("Got data from T3 with index (rec1). RID:" + us.getRid() + ", fld1: " + us.getString("fld1")));
+    }
+
+    idx.close();
+    tx.commit();
+    ```
+
+    This code does the followings:
+    1. Create table `T3` with `fld1` (varchar) and `fld2` (int) fields
+    1. Insert two records to `T3` table.
+    1. Insert two index records to `T3_fld1_idx` index.
+    1. Search records with searchkey `fld1=rec0` using the index
+    1. Search records with searchkey `fld1=rec1` using the index
+
+1. Run.
+
+    ```
+    rm -rf app/datadir && ./gradlew run
+    ```
+
+    You'll see the logs:
+    ```
+    Got data from T3 with index (rec0). RID:[0, 0], fld1: rec0]
+    Got data from T3 with index (rec1). RID:[0, 1], fld1: rec1
+    ```
+### 12.2. Plan
 
 ### 12.3. Test
 
-### 12.4. Hash Index (Optional)
+### 12.3. Hash Index (Optional)

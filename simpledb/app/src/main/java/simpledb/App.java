@@ -9,6 +9,7 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import simpledb.buffer.Buffer;
 import simpledb.buffer.BufferAbortException;
@@ -16,7 +17,9 @@ import simpledb.buffer.BufferMgr;
 import simpledb.file.BlockId;
 import simpledb.file.FileMgr;
 import simpledb.file.Page;
+import simpledb.index.Index;
 import simpledb.log.LogMgr;
+import simpledb.metadata.IndexInfo;
 import simpledb.metadata.MetadataMgr;
 import simpledb.metadata.TableMgr;
 import simpledb.plan.Plan;
@@ -34,6 +37,7 @@ import simpledb.query.SelectScan;
 import simpledb.query.Term;
 import simpledb.query.UpdateScan;
 import simpledb.record.Layout;
+import simpledb.record.RID;
 import simpledb.record.RecordPage;
 import simpledb.record.Schema;
 import simpledb.record.TableScan;
@@ -426,6 +430,70 @@ public class App {
           "A: " + s.getInt("A") + ", B: " + s.getString("B") + ", C: " + s.getInt("C") + ", D: " + s.getString("D"));
     s.close();
 
+    tx.commit();
+
+    // 12 Indexing
+    System.out.println("12. Indexing-------------");
+    tx = new Transaction(fm, lm, bm);
+    metadataMgr = new MetadataMgr(false, tx);
+    sch = new Schema();
+    sch.addStringField("fld1", 10);
+    sch.addIntField("fld2");
+    metadataMgr.createTable("T3", sch, tx);
+    metadataMgr.createIndex("T3_fld1_idx", "T3", "fld1", tx);
+
+    Plan plan = new TablePlan(tx, "T3", metadataMgr);
+    Map<String, IndexInfo> indexes = metadataMgr.getIndexInfo("T3", tx);
+    IndexInfo ii = indexes.get("fld1");
+    Index idx = ii.open();
+
+    // insert 2 records into T3
+    UpdateScan us = (UpdateScan) plan.open();
+    us.beforeFirst();
+    n = 2;
+    System.out.println("Inserting " + n + " records into T3.");
+    for (int i = 0; i < n; i++) {
+      System.out.println("Inserting " + i + " into T3.");
+      us.insert();
+      us.setString("fld1", "rec" + i % 2);
+      us.setInt("fld2", i % 2);
+      // insert index record
+      Constant dataval = us.getVal("fld1");
+      RID datarid = us.getRid();
+      System.out.println("insert index " + dataval + " " + datarid);
+      idx.insert(dataval, datarid);
+    }
+
+    // Get records without index
+    us.beforeFirst();
+    while (us.next()) {
+      System.out.println("Got data from T3 without index. RID:" + us.getRid() + ", fld1: " + us.getString("fld1"));
+    }
+    us.close();
+    tx.commit(); // need to flush index to disk
+
+    // Get records where fld1 = "rec0" with index
+    us = (UpdateScan) plan.open();
+    idx = ii.open();
+    System.out.println("Get records fld1=rec0 using index ------------------------------------------");
+    idx.beforeFirst(new Constant("rec0"));
+    while (idx.next()) {
+      RID datarid = idx.getDataRid();
+      us.moveToRid(datarid);
+      System.out.println(
+          String.format("Got data from T3 with index (rec0). RID:" + us.getRid() + ", fld1: " + us.getString("fld1")));
+    }
+    System.out.println("Get records fld1=rec1 using index ------------------------------------------");
+    idx.beforeFirst(new Constant("rec1"));
+    while (idx.next()) {
+      RID datarid = idx.getDataRid();
+      us.moveToRid(datarid);
+      System.out
+          .println(String
+              .format("Got data from T3 with index (rec1). RID:" + us.getRid() + ", fld1: " + us.getString("fld1")));
+    }
+
+    idx.close();
     tx.commit();
   }
 

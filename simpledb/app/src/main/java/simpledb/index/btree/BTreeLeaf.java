@@ -22,7 +22,10 @@ public class BTreeLeaf {
     this.layout = layout;
     this.searchkey = searchkey;
     contents = new BTPage(tx, blk, layout);
+    currentslot = contents.findSlotBefore(searchkey); // move currentslot to the slot whose next slot has the search key
     filename = blk.fileName();
+    System.out.println("[BTreeLeaf] init. BTPage.RecNums: " +
+        contents.getNumRecs() + ", blk: " + blk + "currentslot: " + currentslot);
   }
 
   public void close() {
@@ -52,20 +55,25 @@ public class BTreeLeaf {
   }
 
   /*
-   * Insert a new leaf record having the specified dataRID and previously-specified search key.
+   * Insert a new leaf record having the specified dataRID and
+   * previously-specified search key.
    */
   public DirEntry insert(RID datarid) {
-    // If the new record does not fit in the page, split the page and return directory entry for the new page.
+    System.out.println("[BTreeLeaf] insert: " + datarid);
+    // If the new record does not fit in the page, split the page and return
+    // directory entry for the new page.
     if (contents.getFlag() >= 0 && contents.getDataVal(0).compareTo(searchkey) > 0) {
       Constant firstval = contents.getDataVal(0);
       BlockId newblk = contents.split(0, contents.getFlag());
       currentslot = 0;
-      contents.setFlag(-1);
+      contents.setFlag(-1); // meaning no overflow block
+      System.out.println("[BTreeLeaf] insert to new blk. RID: " + datarid + ", currentslot: " + currentslot);
       contents.insertLeaf(currentslot, searchkey, datarid);
       return new DirEntry(firstval, newblk.number());
     }
 
-    currentslot++;
+    currentslot++; // currentslot is initialized in the constructor
+    System.out.println("[BTreeLeaf] insert. RID: " + datarid + ", currentslot: " + currentslot);
     contents.insertLeaf(currentslot, searchkey, datarid);
     if (!contents.isFull())
       return null;
