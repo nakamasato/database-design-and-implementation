@@ -621,9 +621,8 @@
     }
     ```
 
-
 #### 12.2.2. Use BTreeIndex
-1. Update `metadata/IndexInfo.java` to use `BTreeIndex`
+1. Replace `DummyIndex` with `BTreeIndex` in `metadata/IndexInfo.java`.
 
     ```java
     public Index open() {
@@ -636,6 +635,8 @@
       return BTreeIndex.searchCost(numBlocks, rpb);
     }
     ```
+
+    Remove `app/src/main/java/simpledb/index/DummyIndex.java`
 
 1. Add the following code to `App.java`
 
