@@ -20,7 +20,7 @@ public class LockTable {
    * Set the number of transactions that hold shared lock on the block
    */
   public synchronized void sLock(BlockId blk) {
-    // System.out.println("[LockTable] starting slock on blk " + blk.number());
+    System.out.println("[LockTable] starting slock on blk " + blk.number());
     try {
       long timestamp = System.currentTimeMillis();
       while (hasXLock(blk) && !waitingTooLong(timestamp))
@@ -41,7 +41,7 @@ public class LockTable {
    * Set -1 for the block
    */
   synchronized void xLock(BlockId blk) {
-    // System.out.println("[LockTable] starting xlock on blk: " + blk.number());
+    System.out.println("[LockTable] starting xlock on blk: " + blk.number());
     try {
       long timestamp = System.currentTimeMillis();
       while (hasOtherSLocks(blk) && !waitingTooLong(timestamp))
@@ -52,11 +52,11 @@ public class LockTable {
     } catch (InterruptedException e) {
       throw new LockAbortException();
     }
-    // System.out.println("[LockTable] completed xlock on blk: " + blk.number() + ", status: " + lockStatusName(blk));
+    System.out.println("[LockTable] completed xlock on blk: " + blk.number() + ", status: " + lockStatusName(blk));
   }
 
   synchronized void unlock(BlockId blk) {
-    // System.out.println("[LockTable] starting unlock on blk: " + blk.number());
+    System.out.println("[LockTable] starting unlock on blk: " + blk.number());
     int val = getLockVal(blk);
     if (val > 1)
       locks.put(blk, val - 1);
@@ -64,7 +64,7 @@ public class LockTable {
       locks.remove(blk);
       notifyAll();
     }
-    // System.out.println("[LockTable] completed unlock on blk: " + blk.number() + ", status: " + lockStatusName(blk));
+    System.out.println("[LockTable] completed unlock on blk: " + blk.number() + ", status: " + lockStatusName(blk));
   }
 
   private boolean hasXLock(BlockId blk) {
