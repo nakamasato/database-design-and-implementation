@@ -47,8 +47,8 @@ public class JdbcNetworkDriverExample {
             rs.getString("SName"), rs.getInt("MajorId"), rs.getInt("GradYear")));
 
       // 6. select records from student table with condition
-      System.out.println("select records (sid =1000) from student table ------");
-      sql = "select Sid, SName, MajorId, GradYear from student where sid = 1000";
+      System.out.println("select records (sid =100) from student table ------");
+      sql = "select Sid, SName, MajorId, GradYear from student where sid = 100";
       rs = stmt.executeQuery(sql);
       while (rs.next())
         System.out.println(String.format("Sid: %d, Sname: %s, MajorId: %d, GradYear: %d", rs.getInt("Sid"),

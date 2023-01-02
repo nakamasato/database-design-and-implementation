@@ -1247,10 +1247,16 @@
     table: idxcat, slotsize: 64
     table: student, slotsize: 30
     select all records from student table ------
-    Sid: 1, Sname: John, MajorId: 10, GradYear: 2020
-    Sid: 2, Sname: Bob, MajorId: 9, GradYear: 2021
-    select records (sid =1) from student table ------
-    Sid: 1, Sname: John, MajorId: 10, GradYear: 2020
+    ...
+    Sid: 94, Sname: name94, MajorId: 3, GradYear: 103
+    Sid: 95, Sname: name95, MajorId: 4, GradYear: 104
+    Sid: 96, Sname: name96, MajorId: 5, GradYear: 105
+    Sid: 97, Sname: name97, MajorId: 6, GradYear: 106
+    Sid: 98, Sname: name98, MajorId: 7, GradYear: 100
+    Sid: 99, Sname: name99, MajorId: 8, GradYear: 101
+    Sid: 100, Sname: name100, MajorId: 9, GradYear: 102
+    select records (sid =100) from student table ------
+    Sid: 100, Sname: name100, MajorId: 9, GradYear: 102
     ```
 ### 12.3. Hash Index (Optional)
 
