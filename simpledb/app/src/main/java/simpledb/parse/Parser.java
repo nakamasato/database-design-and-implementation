@@ -126,7 +126,8 @@ public class Parser {
   }
 
   /*
-   * Parse insert SQL and return InsertData object
+   * Parse insert SQL and return InsertData object.
+   * Only support inserting one record at a time.
    */
   private InsertData insert() {
     lex.eatKeyword("insert");
