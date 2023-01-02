@@ -861,10 +861,164 @@
     ```
 #### 12.2.2. IndexJoinPlan
 1. Add `index/planner/IndexJoinPlan.java`
+    ```java
+    package simpledb.index.planner;
+
+    import simpledb.index.Index;
+    import simpledb.index.query.IndexJoinScan;
+    import simpledb.metadata.IndexInfo;
+    import simpledb.plan.Plan;
+    import simpledb.query.Scan;
+    import simpledb.record.Schema;
+    import simpledb.record.TableScan;
+
+    public class IndexJoinPlan implements Plan {
+      private Plan p1;
+      private Plan p2;
+      private IndexInfo ii;
+      private String joinfield;
+      private Schema sch = new Schema();
+
+      public IndexJoinPlan(Plan p1, Plan p2, IndexInfo ii, String joinfield) {
+        this.p1 = p1;
+        this.p2 = p2;
+        this.ii = ii;
+        this.joinfield = joinfield;
+        sch.addAll(p1.schema());
+        sch.addAll(p2.schema());
+      }
+
+      @Override
+      public Scan open() {
+        Scan s = p1.open();
+        TableScan ts = (TableScan) p2.open();
+        Index idx = ii.open();
+        return new IndexJoinScan(s, idx, joinfield, ts);
+      }
+
+      /*
+       * B(indexjoin(p1,p2,idx)) = B(p1) + R(p1)*B(idx) + R(idexjoin(p1,p2,idx))
+       */
+      @Override
+      public int blockAccessed() {
+        return p1.blockAccessed()
+            + (p1.recordsOutput() * ii.blocksAccessed())
+            + recordsOutput();
+      }
+
+      /*
+       * R(indexjoin(p1,p2,idx)) = R(p1)*R(idx)
+       */
+      @Override
+      public int recordsOutput() {
+        return p1.recordsOutput() * ii.recordsOutput();
+      }
+
+      @Override
+      public int distinctValues(String fldname) {
+        if (p1.schema().hasField(fldname))
+          return p1.distinctValues(fldname);
+        else
+          return p2.distinctValues(fldname);
+      }
+
+      @Override
+      public Schema schema() {
+        return sch;
+      }
+    }
+    ```
 1. Add `index/query/IndexJoinScan.java`
 
-#### 12.2.3. IndexUpdatePlan
-1. Add `index/planner/IndexUpdatePlan.java`
-1. Add `index/query/IndexUpdateScan.java`
+    ```java
+    package simpledb.index.query;
 
-### 12.3. Hash Index (Optional)
+    import simpledb.index.Index;
+    import simpledb.query.Constant;
+    import simpledb.query.Scan;
+    import simpledb.record.TableScan;
+
+    /*
+     * LHS: Scan
+     * RHS: TableScan + index
+     */
+    public class IndexJoinScan implements Scan {
+      private Scan lhs;
+      private Index idx;
+      private String joinfield;
+      private TableScan rhs;
+
+      public IndexJoinScan(Scan s, Index idx, String joinfield, TableScan ts) {
+        this.lhs = s;
+        this.idx = idx;
+        this.joinfield = joinfield;
+        this.rhs = ts;
+        beforeFirst();
+      }
+
+      @Override
+      public void beforeFirst() {
+        lhs.beforeFirst();
+        lhs.next();
+        resetIndex();
+      }
+
+      /*
+       * move to the next index record if possible
+       * otherwise move to the next LHS record and the first index record
+       */
+      @Override
+      public boolean next() {
+        while (true) {
+          if (idx.next()) {
+            rhs.moveToRid(idx.getDataRid());
+            return true;
+          }
+          if (!lhs.next())
+            return false;
+          resetIndex();
+        }
+      }
+
+      @Override
+      public int getInt(String fldname) {
+        if (rhs.hasField(fldname))
+          return rhs.getInt(fldname);
+        else
+          return lhs.getInt(fldname);
+      }
+
+      @Override
+      public String getString(String fldname) {
+        if (rhs.hasField(fldname))
+          return rhs.getString(fldname);
+        else
+          return lhs.getString(fldname);
+      }
+
+      @Override
+      public Constant getVal(String fldname) {
+        if (rhs.hasField(fldname))
+          return rhs.getVal(fldname);
+        else
+          return lhs.getVal(fldname);
+      }
+
+      @Override
+      public boolean hasField(String fldname) {
+        return rhs.hasField(fldname) || lhs.hasField(fldname);
+      }
+
+      @Override
+      public void close() {
+        lhs.close();
+        idx.close();
+        rhs.close();
+      }
+
+      private void resetIndex() {
+        Constant searchkey = lhs.getVal(joinfield);
+        idx.beforeFirst(searchkey);
+      }
+    }
+    ```
