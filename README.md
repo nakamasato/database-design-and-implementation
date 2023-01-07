@@ -20,7 +20,7 @@
 1. [Chapter 10: Planning](simpledb/docs/10-planning.md)
 1. [Chapter 11: JDBC Interfaces](simpledb/docs/11-jdbc-interfaces.md)
 1. [Chapter 12: Indexing](simpledb/docs/12-indexing.md)
-1. Chapter 13: Materialization and Sorting
+1. [Chapter 13: Materialization and Sorting](simpledb/docs/13-materialization-and-sorting.md)
 1. Chpater 14: Effective Buffer Utilization
 1. Chapter 15: Query Optimization
 
