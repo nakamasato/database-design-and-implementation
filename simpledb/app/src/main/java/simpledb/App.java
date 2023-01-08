@@ -20,6 +20,7 @@ import simpledb.file.Page;
 import simpledb.index.Index;
 import simpledb.log.LogMgr;
 import simpledb.materialize.MaterializePlan;
+import simpledb.materialize.SortPlan;
 import simpledb.metadata.IndexInfo;
 import simpledb.metadata.MetadataMgr;
 import simpledb.metadata.TableMgr;
@@ -499,12 +500,27 @@ public class App {
 
     // 13. Materialization and Sorting
     System.out.println("13. Materialization and Sorting -------------");
+    System.out.println("13.1. Materialization --------");
     tx = new Transaction(fm, lm, bm);
     plan = new TablePlan(tx, "T3", metadataMgr); // metadataMgr created above
     plan = new MaterializePlan(tx, plan);
-    us = (UpdateScan) plan.open();
-    while (us.next())
-      System.out.println("get record from TempTable: " + us.getVal("fld1"));
+    Scan scan = plan.open();
+    while (scan.next())
+      System.out.println("get record from TempTable: " + scan.getVal("fld1"));
+
+    scan.close();
+    tx.commit();
+
+    System.out.println("13.2. Sorting --------------------");
+    tx = new Transaction(fm, lm, bm);
+    plan = new TablePlan(tx, "T3", metadataMgr);
+    plan = new SortPlan(tx, plan, Arrays.asList("fld1"));
+    scan = plan.open();
+    while (scan.next())
+      System.out.println("get record from sorted TempTable: " + scan.getVal("fld1"));
+
+    scan.close();
+    tx.commit();
   }
 
   private static void printLogRecords(LogMgr lm, String msg) {
