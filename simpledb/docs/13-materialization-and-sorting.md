@@ -458,5 +458,413 @@
     In this example, it's too few records to split into multiple runs.
 
 ## 13.3. Grouping and Aggregation
+1. Add `materialize/AggregationFn.java`
+    ```java
+    package simpledb.materialize;
+
+    import simpledb.query.Constant;
+    import simpledb.query.Scan;
+
+    /*
+     * Aggregation function used by groupby operator
+     */
+    public interface AggregationFn {
+      void processFirst(Scan s);
+
+      void processNext(Scan s);
+
+      String fieldName();
+
+      Constant value();
+    }
+    ```
+1. Add `materialize/GroupValue.java`
+    `GroupValue` stores the field-value pairs for the grouping fields for a record.
+    ```java
+    package simpledb.materialize;
+
+    import java.util.HashMap;
+    import java.util.List;
+    import java.util.Map;
+
+    import simpledb.query.Constant;
+    import simpledb.query.Scan;
+
+    /*
+     * Object to hold the values of the grouping fields for
+     * the current record of a scan.
+     */
+    public class GroupValue {
+      private Map<String, Constant> vals = new HashMap<>();
+
+      public GroupValue(Scan s, List<String> fields) {
+        vals = new HashMap<>();
+        for (String fldname : fields)
+          vals.put(fldname, s.getVal(fldname));
+      }
+
+      public Constant getVal(String fldname) {
+        return vals.get(fldname);
+      }
+
+      public boolean equals(Object obj) {
+        if (obj == null)
+          return false;
+        GroupValue gv = (GroupValue) obj;
+        for (Map.Entry<String, Constant> e : vals.entrySet()) {
+          Constant v1 = e.getValue();
+          Constant v2 = gv.getVal(e.getKey());
+          if (!v1.equals(v2))
+            return false;
+        }
+        return true;
+      }
+
+      /*
+       * The hashcode of a GroupValue object is
+       * the sum of the hashcodes of its field values.
+       */
+      public int hashCode() {
+        int hashval = 0;
+        for (Constant c : vals.values())
+          hashval += c.hashCode();
+        return hashval;
+      }
+    }
+    ```
+1. Add `materialize/GroupByScan.java`
+    ```java
+    package simpledb.materialize;
+
+    import java.util.List;
+
+    import simpledb.query.Constant;
+    import simpledb.query.Scan;
+
+    public class GroupByScan implements Scan {
+      private Scan s;
+      private List<String> groupfields;
+      private List<AggregationFn> aggfns;
+      private GroupValue groupval;
+      private boolean moregroups; // boolean to indicates if the underlying scan has records to read
+
+      public GroupByScan(Scan s, List<String> groupfields, List<AggregationFn> aggfns) {
+        this.s = s;
+        this.groupfields = groupfields;
+        this.aggfns = aggfns;
+        beforeFirst();
+      }
+
+      @Override
+      public void beforeFirst() {
+        s.beforeFirst();
+        moregroups = s.next();
+      }
+
+      /*
+       * read until a new group value appears.
+       * moregroups is always true until the underlying scan finishes scanning
+       */
+      @Override
+      public boolean next() {
+        if (!moregroups)
+          return false;
+        for (AggregationFn fn : aggfns)
+          fn.processFirst(s);
+        groupval = new GroupValue(s, groupfields);
+        while (moregroups = s.next()) {
+          GroupValue gv = new GroupValue(s, groupfields);
+          if (!groupval.equals(gv))
+            break;
+          for (AggregationFn fn : aggfns)
+            fn.processNext(s);
+        }
+        return true;
+      }
+
+      @Override
+      public int getInt(String fldname) {
+        return getVal(fldname).asInt();
+      }
+
+      @Override
+      public String getString(String fldname) {
+        return getVal(fldname).asString();
+      }
+
+      @Override
+      public Constant getVal(String fldname) {
+        if (groupfields.contains(fldname))
+          return groupval.getVal(fldname);
+        for (AggregationFn fn : aggfns)
+          if (fn.fieldName().equals(fldname))
+            return fn.value();
+        throw new RuntimeException("field: " + fldname + " not found.");
+      }
+
+      @Override
+      public boolean hasField(String fldname) {
+        if (groupfields.contains(fldname))
+          return true;
+        for (AggregationFn fn : aggfns)
+          if (fn.fieldName().equals(fldname))
+            return true;
+        return false;
+      }
+
+      @Override
+      public void close() {
+        s.close();
+      }
+    }
+    ```
+1. Add `materialize/GroupByPlan.java`
+
+    ```java
+    package simpledb.materialize;
+
+    import java.util.List;
+
+    import simpledb.plan.Plan;
+    import simpledb.query.Scan;
+    import simpledb.record.Schema;
+    import simpledb.tx.Transaction;
+
+    public class GroupByPlan implements Plan {
+      private Plan p;
+      private List<String> groupfields;
+      private List<AggregationFn> aggfns;
+      private Schema sch = new Schema(); // contains groupfields & aggregation fields
+
+      public GroupByPlan(Transaction tx, Plan p, List<String> groupfields, List<AggregationFn> aggfns) {
+        this.p = new SortPlan(tx, p, groupfields);
+        this.groupfields = groupfields;
+        this.aggfns = aggfns;
+        for (String fldname : groupfields)
+          sch.add(fldname, p.schema());
+        for (AggregationFn fn : aggfns)
+          sch.addIntField(fn.fieldName());
+      }
+
+      @Override
+      public Scan open() {
+        Scan s = p.open();
+        return new GroupByScan(s, groupfields, aggfns);
+      }
+
+      @Override
+      public int blockAccessed() {
+        return p.blockAccessed();
+      }
+
+      @Override
+      public int recordsOutput() {
+        int numgroups = 1;
+        for (String fldname : groupfields)
+          numgroups += p.distinctValues(fldname);
+        return numgroups;
+      }
+
+      @Override
+      public int distinctValues(String fldname) {
+        if (p.schema().hasField(fldname))
+          return p.distinctValues(fldname);
+        else
+          return recordsOutput();
+      }
+
+      /*
+       * Return the schema of the output table.
+       * The schema consists of the group fields and
+       * aggregation result fields.
+       */
+      @Override
+      public Schema schema() {
+        return sch;
+      }
+    }
+    ```
+
+1. Add `materialize/CountFn.java`
+
+    ```java
+    package simpledb.materialize;
+
+    import simpledb.query.Constant;
+    import simpledb.query.Scan;
+
+    public class CountFn implements AggregationFn {
+      private String fldname;
+      private int count;
+
+      public CountFn(String fldname) {
+        this.fldname = fldname;
+      }
+
+      @Override
+      public void processFirst(Scan s) {
+        count = 1;
+      }
+
+      @Override
+      public void processNext(Scan s) {
+        count++;
+      }
+
+      @Override
+      public String fieldName() {
+        return "countof" + fldname;
+      }
+
+      @Override
+      public Constant value() {
+        return new Constant(count);
+      }
+    }
+    ```
+
+1. Add `materialize/MaxFn.java`
+
+    ```java
+    package simpledb.materialize;
+
+    import simpledb.query.Constant;
+    import simpledb.query.Scan;
+
+    public class MaxFn implements AggregationFn {
+      private String fldname;
+      private Constant val;
+
+      public MaxFn(String fldname) {
+        this.fldname = fldname;
+      }
+
+      @Override
+      public void processFirst(Scan s) {
+        val = s.getVal(fldname);
+      }
+
+      @Override
+      public void processNext(Scan s) {
+        Constant newval = s.getVal(fldname);
+        if (val.compareTo(newval) > 0)
+          val = newval;
+      }
+
+      @Override
+      public String fieldName() {
+        return "maxof" + fldname;
+      }
+
+      @Override
+      public Constant value() {
+        return val;
+      }
+    }
+    ```
+
+1. Add tests
+
+    ```java
+    package simpledb.materialize;
+
+    import static org.junit.jupiter.api.Assertions.assertEquals;
+    import static org.junit.jupiter.api.Assertions.assertFalse;
+    import static org.junit.jupiter.api.Assertions.assertTrue;
+    import static org.mockito.Mockito.when;
+
+    import java.util.Arrays;
+
+    import org.junit.jupiter.api.Test;
+    import org.junit.jupiter.api.extension.ExtendWith;
+    import org.mockito.Mock;
+    import org.mockito.junit.jupiter.MockitoExtension;
+
+    import simpledb.query.Constant;
+    import simpledb.query.Scan;
+
+    @ExtendWith(MockitoExtension.class)
+    public class GroupByScanTest {
+      @Mock
+      private Scan scan;
+
+      @Mock
+      private AggregationFn aggfn;
+
+      @Test
+      public void testGroupByScan() {
+        when(scan.next()).thenReturn(true, true, true, true, false); // 4 records
+        when(scan.getVal("gf")).thenReturn(new Constant(1),new Constant(1) , new Constant(2), new Constant(2));
+        when(aggfn.fieldName()).thenReturn("countoffld");
+        when(aggfn.value()).thenReturn(new Constant(10), new Constant(20));
+
+        GroupByScan gbs = new GroupByScan(scan, Arrays.asList("gf"), Arrays.asList(aggfn));
+
+        assertTrue(gbs.next()); // gf=1
+        assertEquals(1, gbs.getInt("gf"));
+        assertEquals(new Constant(10), gbs.getVal("countoffld"));
+        assertTrue(gbs.next()); // gf=2
+        assertEquals(2, gbs.getInt("gf"));
+        assertEquals(new Constant(20), gbs.getVal("countoffld"));
+        assertFalse(gbs.next());
+      }
+    }
+    ```
+
+    ```java
+    package simpledb.materialize;
+
+    import static org.junit.jupiter.api.Assertions.assertEquals;
+
+    import org.junit.jupiter.api.Test;
+
+    import simpledb.query.Constant;
+
+    public class CountFnTest {
+
+      @Test
+      public void testCountFn() {
+        AggregationFn fn = new CountFn("fld");
+        assertEquals("countoffld", fn.fieldName());
+        fn.processFirst(null);
+        assertEquals(new Constant(1), fn.value());
+        fn.processNext(null);
+        assertEquals(new Constant(2), fn.value());
+      }
+    }
+    ```
+
+1. Run test
+    ```
+    rm -rf app/datadir && ./gradlew test
+    ```
+
+1. Add the following code to `App.java`
+
+    ```java
+    System.out.println("13.3. GroupBy and Aggregation --------------------");
+    tx = new Transaction(fm, lm, bm);
+    plan = new TablePlan(tx, "T3", metadataMgr);
+    AggregationFn aggfn = new CountFn("fld2");
+    plan = new GroupByPlan(tx, plan, Arrays.asList("fld1"), Arrays.asList(aggfn));
+    scan = plan.open();
+    while (scan.next())
+      System.out
+        .println("aggregation result: groupby: " + scan.getVal("fld1") + ", count: " + scan.getVal(countfn.fieldName()) + ", max: " + scan.getVal(maxfn.fieldName()));
+
+    scan.close();
+    tx.commit();
+    ```
+
+1. Run
+
+    ```
+    rm -rf app/datadir && ./gradlew run
+    ```
+
+    ```
+    aggregation result: groupby: rec0, count: 1, max: 0
+    aggregation result: groupby: rec1, count: 1, max: 1
+    ```
 
 ## 13.4. MergeJoin
