@@ -19,7 +19,11 @@ import simpledb.file.FileMgr;
 import simpledb.file.Page;
 import simpledb.index.Index;
 import simpledb.log.LogMgr;
+import simpledb.materialize.AggregationFn;
+import simpledb.materialize.CountFn;
+import simpledb.materialize.GroupByPlan;
 import simpledb.materialize.MaterializePlan;
+import simpledb.materialize.MaxFn;
 import simpledb.materialize.SortPlan;
 import simpledb.metadata.IndexInfo;
 import simpledb.metadata.MetadataMgr;
@@ -519,6 +523,19 @@ public class App {
     while (scan.next())
       System.out.println("get record from sorted TempTable: " + scan.getVal("fld1"));
 
+    scan.close();
+    tx.commit();
+
+    System.out.println("13.3. GroupBy and Aggregation --------------------");
+    tx = new Transaction(fm, lm, bm);
+    plan = new TablePlan(tx, "T3", metadataMgr);
+    AggregationFn countfn = new CountFn("fld2");
+    AggregationFn maxfn = new MaxFn("fld2");
+    plan = new GroupByPlan(tx, plan, Arrays.asList("fld1"), Arrays.asList(countfn, maxfn));
+    scan = plan.open();
+    while (scan.next())
+      System.out
+          .println("aggregation result: groupby: " + scan.getVal("fld1") + ", count: " + scan.getVal(countfn.fieldName()) + ", max: " + scan.getVal(maxfn.fieldName()));
     scan.close();
     tx.commit();
   }
