@@ -68,7 +68,6 @@ public class Transaction {
   }
 
   public void setInt(BlockId blk, int offset, int val, boolean okToLog) {
-    System.out.println("[Transaction] setInt to block " + blk.number() + " with offset " + offset + " and val " + val);
     concurMgr.xLock(blk);
     Buffer buff = mybuffers.getBuffer(blk);
     int lsn = -1;
@@ -80,8 +79,6 @@ public class Transaction {
   }
 
   public void setString(BlockId blk, int offset, String val, boolean okToLog) {
-    System.out
-        .println("[Transaction] setString to block " + blk.number() + " with offset " + offset + " and val " + val);
     concurMgr.xLock(blk);
     Buffer buff = mybuffers.getBuffer(blk);
     int lsn = -1;

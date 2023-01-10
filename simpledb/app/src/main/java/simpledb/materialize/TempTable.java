@@ -15,6 +15,7 @@ public class TempTable {
   public TempTable(Transaction tx, Schema sch) {
     this.tx = tx;
     tblname = nextTableName();
+    System.out.println("[TempTable] " + tblname);
     layout = new Layout(sch);
   }
 

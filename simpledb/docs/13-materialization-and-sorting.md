@@ -1070,12 +1070,11 @@
 
     ```java
     System.out.println("13.4. MergeJoin --------------------");
-    System.out.println(metadataMgr.getStatInfo("T1", layout1, tx));
+    bm = new BufferMgr(fm, lm, 16); // buffer 8 is not enough
     tx = new Transaction(fm, lm, bm);
     p1 = new TablePlan(tx, "T1", metadataMgr); // T1 A:int, B:String
-    p2 = new TablePlan(tx, "T3", metadataMgr); // T3 fld1:String, fld2:int
-    p2 = new SortPlan(tx, p2, Arrays.asList("fld2")); // T3 sorted by fld2 field
-    plan = new MergeJoinPlan(tx, p1, p2, "A", "fld2"); // JOIN ON T1.A = T3.fld2
+    p2 = new TablePlan(tx, "T2", metadataMgr); // T3 fld1:String, fld2:int
+    plan = new MergeJoinPlan(tx, p1, p2, "A", "C"); // JOIN ON T1.A = T3.fld2
     scan = plan.open();
     scan.beforeFirst();
     while (scan.next()) {
@@ -1083,14 +1082,14 @@
       for (String fldname : p1.schema().fields())
         System.out.print(" T1." + fldname + ": " + scan.getVal(fldname) + ",");
       for (String fldname : p2.schema().fields())
-        System.out.print(" T3." + fldname + ": " + scan.getVal(fldname) + ",");
+        System.out.print(" T2." + fldname + ": " + scan.getVal(fldname) + ",");
       System.out.println("");
     }
     scan.close();
     tx.commit();
     ```
 
-    The codes merge `T1` and `T3` on `T3.A = T3.fld2`.
+    The codes merge `T1` and `T2` on `T1.A = T2.C`.
 
 1. Run test
 
@@ -1101,6 +1100,12 @@
     The result may be like the following but it's not deterministic as the data in `T1` is random.
     ```
     [MergeJoinScan] next update joinval: 1
-    merged result: T1.A: 1, T1.B: rec1, T3.fld1: rec1, T3.fld2: 1,
-    [MergeJoinScan] next no more next: 1
+    merged result: T1.A: 1, T1.B: rec1, T2.C: 1, T2.D: rec1,
+    [MergeJoinScan] next update joinval: 3
+    merged result: T1.A: 3, T1.B: rec3, T2.C: 3, T2.D: rec3,
+    [MergeJoinScan] next update joinval: 6
+    merged result: T1.A: 6, T1.B: rec6, T2.C: 6, T2.D: rec6,
+    [MergeJoinScan] next update joinval: 9
+    merged result: T1.A: 9, T1.B: rec9, T2.C: 9, T2.D: rec9,
+    [MergeJoinScan] next no more next: 9
     ```

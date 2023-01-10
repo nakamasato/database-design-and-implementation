@@ -26,7 +26,6 @@ import simpledb.materialize.MaterializePlan;
 import simpledb.materialize.MaxFn;
 import simpledb.materialize.MergeJoinPlan;
 import simpledb.materialize.SortPlan;
-import simpledb.materialize.SortScan;
 import simpledb.metadata.IndexInfo;
 import simpledb.metadata.MetadataMgr;
 import simpledb.metadata.TableMgr;
@@ -542,12 +541,11 @@ public class App {
     tx.commit();
 
     System.out.println("13.4. MergeJoin --------------------");
-    System.out.println(metadataMgr.getStatInfo("T1", layout1, tx));
+    bm = new BufferMgr(fm, lm, 16); // buffer 8 is not enough
     tx = new Transaction(fm, lm, bm);
     p1 = new TablePlan(tx, "T1", metadataMgr); // T1 A:int, B:String
-    p2 = new TablePlan(tx, "T3", metadataMgr); // T3 fld1:String, fld2:int
-    p2 = new SortPlan(tx, p2, Arrays.asList("fld2")); // T3 sorted by fld2 field
-    plan = new MergeJoinPlan(tx, p1, p2, "A", "fld2"); // JOIN ON T1.A = T3.fld2
+    p2 = new TablePlan(tx, "T2", metadataMgr); // T3 fld1:String, fld2:int
+    plan = new MergeJoinPlan(tx, p1, p2, "A", "C"); // JOIN ON T1.A = T3.fld2
     scan = plan.open();
     scan.beforeFirst();
     while (scan.next()) {
@@ -555,7 +553,7 @@ public class App {
       for (String fldname : p1.schema().fields())
         System.out.print(" T1." + fldname + ": " + scan.getVal(fldname) + ",");
       for (String fldname : p2.schema().fields())
-        System.out.print(" T3." + fldname + ": " + scan.getVal(fldname) + ",");
+        System.out.print(" T2." + fldname + ": " + scan.getVal(fldname) + ",");
       System.out.println("");
     }
     scan.close();
