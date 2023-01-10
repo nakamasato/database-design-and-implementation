@@ -868,3 +868,231 @@
     ```
 
 ## 13.4. MergeJoin
+
+1. Add `savePosition` and `restorePosition` to `SortScan`
+
+    ```java
+    public void restorePosition() {
+      RID rid1 = savedposition.get(0);
+      RID rid2 = savedposition.get(1);
+      s1.moveToRid(rid1);
+      if (rid2 != null)
+        s2.moveToRid(rid2);
+    }
+
+    public void savePosition() {
+      RID rid1 = s1.getRid();
+      RID rid2 = (s2 == null) ? null : s2.getRid();
+      savedposition = Arrays.asList(rid1, rid2);
+    }
+    ```
+1. Add `materialize/MergeJoinScan.java`
+
+    ```java
+    package simpledb.materialize;
+
+    import simpledb.query.Constant;
+    import simpledb.query.Scan;
+
+    public class MergeJoinScan implements Scan {
+      private Scan s1;
+      private SortScan s2;
+      private String fldname1;
+      private String fldname2;
+      private Constant joinval = null;
+
+      public MergeJoinScan(Scan s1, SortScan s2, String fldname1, String fldname2) {
+        this.s1 = s1;
+        this.s2 = s2;
+        this.fldname1 = fldname1;
+        this.fldname2 = fldname2;
+        beforeFirst();
+      }
+
+      @Override
+      public void beforeFirst() {
+        s1.beforeFirst();
+        s2.beforeFirst();
+      }
+
+      /*
+       * 1. If the next RHS record has the same join value, then move it.
+       * 2. If the next LHS record has the same join value, move the RHS scan
+       * back to the first record having that join value.
+       * 3. Otherwise, repeatedly move the scan having the smallest value until
+       * a common join value is found.
+       * 4. If there's no more records in both RHS and LHS, return false.
+       */
+      @Override
+      public boolean next() {
+        boolean hasmore2 = s2.next();
+        if (hasmore2 && s2.getVal(fldname2).equals(joinval)) {
+          System.out.println("[MergeJoinScan] next increments RHS joinval: " + joinval);
+          return true;
+        }
+
+        boolean hasmore1 = s1.next();
+        if (hasmore1 && s1.getVal(fldname1).equals(joinval)) {
+          s2.restorePosition();
+          System.out.println(
+              "[MergeJoinScan] next increments LHS and move RHS back to the starting point of joinval: " + joinval);
+          return true;
+        }
+
+        while (hasmore1 && hasmore2) {
+          Constant v1 = s1.getVal(fldname1);
+          Constant v2 = s2.getVal(fldname2);
+          if (v1.compareTo(v2) < 0)
+            hasmore1 = s1.next();
+          else if (v1.compareTo(v2) > 0)
+            hasmore2 = s2.next();
+          else {
+            s2.savePosition();
+            joinval = s2.getVal(fldname2);
+            System.out.println("[MergeJoinScan] next update joinval: " + joinval);
+            return true;
+          }
+        }
+        System.out.println("[MergeJoinScan] next no more next: " + joinval);
+        return false;
+      }
+
+      @Override
+      public int getInt(String fldname) {
+        if (s1.hasField(fldname))
+          return s1.getInt(fldname);
+        else
+          return s2.getInt(fldname);
+      }
+
+      @Override
+      public String getString(String fldname) {
+        if (s1.hasField(fldname))
+          return s1.getString(fldname);
+        else
+          return s2.getString(fldname);
+      }
+
+      @Override
+      public Constant getVal(String fldname) {
+        if (s1.hasField(fldname))
+          return s1.getVal(fldname);
+        else
+          return s2.getVal(fldname);
+      }
+
+      @Override
+      public boolean hasField(String fldname) {
+        return s1.hasField(fldname) || s2.hasField(fldname);
+      }
+
+      @Override
+      public void close() {
+        s1.close();
+        s2.close();
+      }
+    }
+    ```
+
+1. Add `materialize/MergeJoinPlan.java`
+
+    ```java
+    package simpledb.materialize;
+
+    import java.util.Arrays;
+    import java.util.List;
+
+    import simpledb.plan.Plan;
+    import simpledb.query.Scan;
+    import simpledb.record.Schema;
+    import simpledb.tx.Transaction;
+
+    public class MergeJoinPlan implements Plan {
+      private Plan p1, p2;
+      private String fldname1, fldname2;
+      private Schema sch = new Schema();
+
+      public MergeJoinPlan(Transaction tx, Plan p1, Plan p2, String fldname1, String fldname2) {
+        this.fldname1 = fldname1;
+        List<String> sortlist1 = Arrays.asList(fldname1);
+        this.p1 = new SortPlan(tx, p1, sortlist1);
+
+        this.fldname2 = fldname2;
+        List<String> sortlist2 = Arrays.asList(fldname2);
+        this.p2 = new SortPlan(tx, p2, sortlist2);
+
+        sch.addAll(p1.schema());
+        sch.addAll(p2.schema());
+      }
+
+      @Override
+      public Scan open() {
+        Scan s1 = p1.open();
+        SortScan s2 = (SortScan) p2.open();
+        return new MergeJoinScan(s1, s2, fldname1, fldname2);
+      }
+
+      @Override
+      public int blockAccessed() {
+        return p1.blockAccessed() + p2.blockAccessed();
+      }
+
+      @Override
+      public int recordsOutput() {
+        int maxvals = Math.max(p1.distinctValues(fldname1),
+            p2.distinctValues(fldname2));
+        return (p1.recordsOutput() * p2.recordsOutput()) / maxvals;
+      }
+
+      @Override
+      public int distinctValues(String fldname) {
+        if (p1.schema().hasField(fldname))
+          return p1.distinctValues(fldname);
+        else
+          return p2.distinctValues(fldname);
+      }
+
+      @Override
+      public Schema schema() {
+        return sch;
+      }
+    }
+    ```
+1. Add the following to `App.java`
+
+    ```java
+    System.out.println("13.4. MergeJoin --------------------");
+    System.out.println(metadataMgr.getStatInfo("T1", layout1, tx));
+    tx = new Transaction(fm, lm, bm);
+    p1 = new TablePlan(tx, "T1", metadataMgr); // T1 A:int, B:String
+    p2 = new TablePlan(tx, "T3", metadataMgr); // T3 fld1:String, fld2:int
+    p2 = new SortPlan(tx, p2, Arrays.asList("fld2")); // T3 sorted by fld2 field
+    plan = new MergeJoinPlan(tx, p1, p2, "A", "fld2"); // JOIN ON T1.A = T3.fld2
+    scan = plan.open();
+    scan.beforeFirst();
+    while (scan.next()) {
+      System.out.print("merged result:");
+      for (String fldname : p1.schema().fields())
+        System.out.print(" T1." + fldname + ": " + scan.getVal(fldname) + ",");
+      for (String fldname : p2.schema().fields())
+        System.out.print(" T3." + fldname + ": " + scan.getVal(fldname) + ",");
+      System.out.println("");
+    }
+    scan.close();
+    tx.commit();
+    ```
+
+    The codes merge `T1` and `T3` on `T3.A = T3.fld2`.
+
+1. Run test
+
+    ```
+    rm -rf app/datadir && ./gradlew run
+    ```
+
+    The result may be like the following but it's not deterministic as the data in `T1` is random.
+    ```
+    [MergeJoinScan] next update joinval: 1
+    merged result: T1.A: 1, T1.B: rec1, T3.fld1: rec1, T3.fld2: 1,
+    [MergeJoinScan] next no more next: 1
+    ```

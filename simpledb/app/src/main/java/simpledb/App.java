@@ -24,6 +24,7 @@ import simpledb.materialize.CountFn;
 import simpledb.materialize.GroupByPlan;
 import simpledb.materialize.MaterializePlan;
 import simpledb.materialize.MaxFn;
+import simpledb.materialize.MergeJoinPlan;
 import simpledb.materialize.SortPlan;
 import simpledb.metadata.IndexInfo;
 import simpledb.metadata.MetadataMgr;
@@ -435,7 +436,6 @@ public class App {
       System.out.println(
           "A: " + s.getInt("A") + ", B: " + s.getString("B") + ", C: " + s.getInt("C") + ", D: " + s.getString("D"));
     s.close();
-
     tx.commit();
 
     // 12 Indexing
@@ -535,7 +535,28 @@ public class App {
     scan = plan.open();
     while (scan.next())
       System.out
-          .println("aggregation result: groupby: " + scan.getVal("fld1") + ", count: " + scan.getVal(countfn.fieldName()) + ", max: " + scan.getVal(maxfn.fieldName()));
+          .println("aggregation result: groupby: " + scan.getVal("fld1") + ", count: "
+              + scan.getVal(countfn.fieldName()) + ", max: " + scan.getVal(maxfn.fieldName()));
+    scan.close();
+    tx.commit();
+
+    System.out.println("13.4. MergeJoin --------------------");
+    System.out.println(metadataMgr.getStatInfo("T1", layout1, tx));
+    tx = new Transaction(fm, lm, bm);
+    p1 = new TablePlan(tx, "T1", metadataMgr); // T1 A:int, B:String
+    p2 = new TablePlan(tx, "T3", metadataMgr); // T3 fld1:String, fld2:int
+    p2 = new SortPlan(tx, p2, Arrays.asList("fld2")); // T3 sorted by fld2 field
+    plan = new MergeJoinPlan(tx, p1, p2, "A", "fld2"); // JOIN ON T1.A = T3.fld2
+    scan = plan.open();
+    scan.beforeFirst();
+    while (scan.next()) {
+      System.out.print("merged result:");
+      for (String fldname : p1.schema().fields())
+        System.out.print(" T1." + fldname + ": " + scan.getVal(fldname) + ",");
+      for (String fldname : p2.schema().fields())
+        System.out.print(" T3." + fldname + ": " + scan.getVal(fldname) + ",");
+      System.out.println("");
+    }
     scan.close();
     tx.commit();
   }
