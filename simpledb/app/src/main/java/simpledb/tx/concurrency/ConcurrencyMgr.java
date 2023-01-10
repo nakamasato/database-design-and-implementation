@@ -53,7 +53,6 @@ public class ConcurrencyMgr {
    * Release all locks
    */
   public void release() {
-    System.out.println("[ConcurrencyMgr] starting release: " + toString());
     for (BlockId blk : locks.keySet())
       locktbl.unlock(blk);
     locks.clear();

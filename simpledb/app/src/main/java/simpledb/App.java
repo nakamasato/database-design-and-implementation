@@ -24,6 +24,7 @@ import simpledb.materialize.CountFn;
 import simpledb.materialize.GroupByPlan;
 import simpledb.materialize.MaterializePlan;
 import simpledb.materialize.MaxFn;
+import simpledb.materialize.MergeJoinPlan;
 import simpledb.materialize.SortPlan;
 import simpledb.metadata.IndexInfo;
 import simpledb.metadata.MetadataMgr;
@@ -435,7 +436,6 @@ public class App {
       System.out.println(
           "A: " + s.getInt("A") + ", B: " + s.getString("B") + ", C: " + s.getInt("C") + ", D: " + s.getString("D"));
     s.close();
-
     tx.commit();
 
     // 12 Indexing
@@ -517,11 +517,11 @@ public class App {
 
     System.out.println("13.2. Sorting --------------------");
     tx = new Transaction(fm, lm, bm);
-    plan = new TablePlan(tx, "T3", metadataMgr);
-    plan = new SortPlan(tx, plan, Arrays.asList("fld1"));
+    plan = new TablePlan(tx, "T1", metadataMgr);
+    plan = new SortPlan(tx, plan, Arrays.asList("A"));
     scan = plan.open();
     while (scan.next())
-      System.out.println("get record from sorted TempTable: " + scan.getVal("fld1"));
+      System.out.println("get record from sorted TempTable: " + scan.getVal("A"));
 
     scan.close();
     tx.commit();
@@ -535,7 +535,27 @@ public class App {
     scan = plan.open();
     while (scan.next())
       System.out
-          .println("aggregation result: groupby: " + scan.getVal("fld1") + ", count: " + scan.getVal(countfn.fieldName()) + ", max: " + scan.getVal(maxfn.fieldName()));
+          .println("aggregation result: groupby: " + scan.getVal("fld1") + ", count: "
+              + scan.getVal(countfn.fieldName()) + ", max: " + scan.getVal(maxfn.fieldName()));
+    scan.close();
+    tx.commit();
+
+    System.out.println("13.4. MergeJoin --------------------");
+    bm = new BufferMgr(fm, lm, 16); // buffer 8 is not enough
+    tx = new Transaction(fm, lm, bm);
+    p1 = new TablePlan(tx, "T1", metadataMgr); // T1 A:int, B:String
+    p2 = new TablePlan(tx, "T2", metadataMgr); // T3 fld1:String, fld2:int
+    plan = new MergeJoinPlan(tx, p1, p2, "A", "C"); // JOIN ON T1.A = T3.fld2
+    scan = plan.open();
+    scan.beforeFirst();
+    while (scan.next()) {
+      System.out.print("merged result:");
+      for (String fldname : p1.schema().fields())
+        System.out.print(" T1." + fldname + ": " + scan.getVal(fldname) + ",");
+      for (String fldname : p2.schema().fields())
+        System.out.print(" T2." + fldname + ": " + scan.getVal(fldname) + ",");
+      System.out.println("");
+    }
     scan.close();
     tx.commit();
   }
