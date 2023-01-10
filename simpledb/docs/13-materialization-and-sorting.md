@@ -432,11 +432,11 @@
     ```java
     System.out.println("13.2. Sorting --------------------");
     tx = new Transaction(fm, lm, bm);
-    plan = new TablePlan(tx, "T3", metadataMgr);
-    plan = new SortPlan(tx, plan, Arrays.asList("fld1"));
+    plan = new TablePlan(tx, "T1", metadataMgr);
+    plan = new SortPlan(tx, plan, Arrays.asList("A"));
     scan = plan.open();
     while (scan.next())
-      System.out.println("get record from sorted TempTable: " + scan.getVal("fld1"));
+      System.out.println("get record from sorted TempTable: " + scan.getVal("A"));
 
     scan.close();
     tx.commit();
@@ -448,14 +448,22 @@
     ```
 
     ```
-    [SortPlan] split into 1 runs
-    [SortPlan] merged into 1 runs
-    [TableScan] moveToBlock file: temp2.tbl, blk: 0
-    get record from sorted TempTable: rec0
-    get record from sorted TempTable: rec1
+    [SortPlan] merged into 2 runs
+    [TableScan] moveToBlock file: temp9.tbl, blk: 0
+    [TableScan] moveToBlock file: temp6.tbl, blk: 0
+    get record from sorted TempTable: 10
+    get record from sorted TempTable: 11
+    get record from sorted TempTable: 11
+    get record from sorted TempTable: 22
+    get record from sorted TempTable: 24
+    get record from sorted TempTable: 28
+    get record from sorted TempTable: 32
+    get record from sorted TempTable: 32
+    get record from sorted TempTable: 40
+    get record from sorted TempTable: 40
     ```
 
-    In this example, it's too few records to split into multiple runs.
+    You may see different result as the data in `T1` is random but you can see the records are sorted.
 
 ## 13.3. Grouping and Aggregation
 1. Add `materialize/AggregationFn.java`

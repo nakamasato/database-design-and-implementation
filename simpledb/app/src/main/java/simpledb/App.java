@@ -26,6 +26,7 @@ import simpledb.materialize.MaterializePlan;
 import simpledb.materialize.MaxFn;
 import simpledb.materialize.MergeJoinPlan;
 import simpledb.materialize.SortPlan;
+import simpledb.materialize.SortScan;
 import simpledb.metadata.IndexInfo;
 import simpledb.metadata.MetadataMgr;
 import simpledb.metadata.TableMgr;
@@ -517,11 +518,11 @@ public class App {
 
     System.out.println("13.2. Sorting --------------------");
     tx = new Transaction(fm, lm, bm);
-    plan = new TablePlan(tx, "T3", metadataMgr);
-    plan = new SortPlan(tx, plan, Arrays.asList("fld1"));
+    plan = new TablePlan(tx, "T1", metadataMgr);
+    plan = new SortPlan(tx, plan, Arrays.asList("A"));
     scan = plan.open();
     while (scan.next())
-      System.out.println("get record from sorted TempTable: " + scan.getVal("fld1"));
+      System.out.println("get record from sorted TempTable: " + scan.getVal("A"));
 
     scan.close();
     tx.commit();
