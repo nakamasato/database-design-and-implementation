@@ -104,6 +104,10 @@ public class Transaction {
     return fm.blockSize();
   }
 
+  public int availableBuffs() {
+    return bm.available();
+  }
+
   private static synchronized int nextTxNumber() {
     nextTxNum++;
     return nextTxNum;
