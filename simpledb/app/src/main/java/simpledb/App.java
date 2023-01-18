@@ -558,6 +558,20 @@ public class App {
     }
     scan.close();
     tx.commit();
+
+    // Exercise 13.8. Sort empty table
+    tx = new Transaction(fm, lm, bm);
+    sch = new Schema();
+    sch.addIntField("intfld");
+    layout = new Layout(sch);
+    metadataMgr.createTable("emptytable", sch, tx);
+    plan = new TablePlan(tx, "emptytable", metadataMgr);
+    plan = new SortPlan(tx, plan, Arrays.asList("intfld"));
+    scan = plan.open();
+    while (scan.next())
+      System.out.println(scan.getInt("intfld"));
+    scan.close();
+    tx.commit();
   }
 
   private static void printLogRecords(LogMgr lm, String msg) {
