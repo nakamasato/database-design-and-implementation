@@ -1109,3 +1109,52 @@
     merged result: T1.A: 9, T1.B: rec9, T2.C: 9, T2.D: rec9,
     [MergeJoinScan] next no more next: 9
     ```
+
+
+## Exercise 13.8. Sort empty table
+
+1. Add the following code to `App.java`
+
+    ```java
+    // Exercise 13.8. Sort empty table
+    tx = new Transaction(fm, lm, bm);
+    sch = new Schema();
+    sch.addIntField("intfld");
+    layout = new Layout(sch);
+    metadataMgr.createTable("emptytable", sch, tx);
+    plan = new TablePlan(tx, "emptytable", metadataMgr);
+    plan = new SortPlan(tx, plan, Arrays.asList("intfld"));
+    scan = plan.open();
+    while (scan.next())
+      System.out.println(scan.getInt("intfld"));
+    scan.close();
+    tx.commit();
+    ```
+1. Run
+    ```
+    Exception in thread "main" java.lang.IndexOutOfBoundsException: Index 0 out of bounds for length 0
+            at java.base/jdk.internal.util.Preconditions.outOfBounds(Preconditions.java:100)
+            at java.base/jdk.internal.util.Preconditions.outOfBoundsCheckIndex(Preconditions.java:106)
+            at java.base/jdk.internal.util.Preconditions.checkIndex(Preconditions.java:302)
+            at java.base/java.util.Objects.checkIndex(Objects.java:385)
+            at java.base/java.util.ArrayList.get(ArrayList.java:427)
+            at simpledb.materialize.SortScan.<init>(SortScan.java:27)
+            at simpledb.materialize.SortPlan.open(SortPlan.java:37)
+            at simpledb.App.main(App.java:570)
+    ```
+
+1. Update `SortScan.java`
+
+    ```java
+    if (!runs.isEmpty()) {
+      s1 = runs.get(0).open();
+      hasmore1 = s1.next();
+    }
+    ```
+
+    ```java
+    if (s1 != null)
+        s1.close()
+    ```
+
+1. Run `./gradlew run` -> no error
