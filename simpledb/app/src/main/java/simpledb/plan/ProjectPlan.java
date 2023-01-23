@@ -45,4 +45,9 @@ public class ProjectPlan implements Plan {
   public Schema schema() {
     return schema;
   }
+
+  @Override
+  public int preprocessingCost() {
+    return 0;
+  }
 }

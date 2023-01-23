@@ -46,4 +46,9 @@ public class IndexSelectPlan implements Plan {
   public Schema schema() {
     return p.schema();
   }
+
+  @Override
+  public int preprocessingCost() {
+    return 0;
+  }
 }

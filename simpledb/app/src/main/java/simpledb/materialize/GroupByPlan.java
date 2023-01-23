@@ -59,4 +59,12 @@ public class GroupByPlan implements Plan {
   public Schema schema() {
     return sch;
   }
+
+  /*
+   * No cost in preprocessing
+   */
+  @Override
+  public int preprocessingCost() {
+    return 0;
+  }
 }
