@@ -33,6 +33,11 @@ public interface Plan {
   public int distinctValues(String fldname);
 
   /*
+   * The estimated cost for preprocessing
+   */
+  public int preprocessingCost();
+
+  /*
    * Schema of output table
    */
   public Schema schema();

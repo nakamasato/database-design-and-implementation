@@ -55,4 +55,9 @@ public class SelectPlan implements Plan {
   public Schema schema() {
     return p.schema();
   }
+
+  @Override
+  public int preprocessingCost() {
+    return 0;
+  }
 }

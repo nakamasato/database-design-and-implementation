@@ -130,4 +130,25 @@ public class SortPlan implements Plan {
       dest.setVal(fldname, src.getVal(fldname));
     return src.next();
   }
+
+  /*
+   * Ref: 13.4.4. The Cost of Mergesort
+   * Condition:
+   * 1. The algorithm merges k runs at a time.
+   * 2. There are R initial runs.
+   * 3. The materialized input records require B block.
+   * Split phase:
+   * 1. B block accesses
+   * 2. The cost of the input
+   * Sort iteration: logkR iterations
+   * 1. 2B block accesses for each iteration * (logkR - 1)
+   */
+  @Override
+  public int preprocessingCost() {
+    int k = 2; // merge 2 runs at once
+    int r = blockAccessed() / 2; // estimated initial runs
+    int splitCost = blockAccessed() + p.blockAccessed(); // cost of writing temptable + input cost
+    double sortCost = 2 * blockAccessed() * (Math.log(r) / Math.log(k) - 1);
+    return (int) (splitCost + sortCost);
+  }
 }

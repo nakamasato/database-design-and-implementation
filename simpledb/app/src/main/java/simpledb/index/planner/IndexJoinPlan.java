@@ -66,4 +66,9 @@ public class IndexJoinPlan implements Plan {
   public Schema schema() {
     return sch;
   }
+
+  @Override
+  public int preprocessingCost() {
+    return 0;
+  }
 }

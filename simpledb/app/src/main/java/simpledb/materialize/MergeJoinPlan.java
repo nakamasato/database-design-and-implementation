@@ -10,7 +10,8 @@ import simpledb.tx.Transaction;
 
 public class MergeJoinPlan implements Plan {
   private Plan p1, p2;
-  private String fldname1, fldname2;
+  private String fldname1;
+  private String fldname2;
   private Schema sch = new Schema();
 
   public MergeJoinPlan(Transaction tx, Plan p1, Plan p2, String fldname1, String fldname2) {
@@ -56,5 +57,14 @@ public class MergeJoinPlan implements Plan {
   @Override
   public Schema schema() {
     return sch;
+  }
+
+  /*
+   * Ref. 13.6.1 (p388)
+   * sort the two plans
+   */
+  @Override
+  public int preprocessingCost() {
+    return p1.preprocessingCost() + p2.preprocessingCost();
   }
 }

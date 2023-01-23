@@ -35,6 +35,11 @@ public class MultibufferProductPlan implements Plan {
     return new MultibufferProductScan(tx, leftscan, tt.tableName(), tt.getLayout());
   }
 
+  /*
+   * Calculate the numchunks by estimating the size of materialized right-side
+   * table.
+   * The estimation is provided by MaterializePlan
+   */
   @Override
   public int blockAccessed() {
     int avail = tx.availableBuffs();
@@ -74,5 +79,16 @@ public class MultibufferProductPlan implements Plan {
     src.close();
     dest.close();
     return t;
+  }
+
+  /*
+   * 1. Materialize LHS (MaterializePlan)
+   * 2. Read and write RHS (copyRecordsFrom)
+   */
+  @Override
+  public int preprocessingCost() {
+    return (lhs.preprocessingCost() // materialize preprocessing
+        + rhs.blockAccessed() // read from rhs (input cost)
+        + blockAccessed()); // write to temp table
   }
 }

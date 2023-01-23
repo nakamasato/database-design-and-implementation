@@ -45,4 +45,9 @@ public class TablePlan implements Plan {
   public Schema schema() {
     return layout.schema();
   }
+
+  @Override
+  public int preprocessingCost() {
+    return 0;
+  }
 }

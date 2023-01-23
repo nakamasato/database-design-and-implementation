@@ -226,6 +226,20 @@
       }
     }
     ```
+
+    If you already have added `preprocessingCost()` to Plan interface, you need to implement it.
+    ```java
+    /*
+     * 1. Materialize LHS (MaterializePlan)
+     * 2. Read and write RHS (copyRecordsFrom)
+     */
+    @Override
+    public int preprocessingCost() {
+      return (lhs.preprocessingCost() // materialize preprocessing
+          + rhs.blockAccessed() // read from rhs (input cost)
+          + blockAccessed()); // write to temp table
+    }
+    ```
 1. Add `multibuffer/MultibufferProductScan.java`
 
     ```java
