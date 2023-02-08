@@ -61,6 +61,11 @@ public class SortPlan implements Plan {
   /*
    * split into TempTables in that all records in each TempTable
    * are sorted.
+   * Example: 2 6 20 4 1 16 19 3 18
+   * run1: 2 6 20
+   * run2: 4
+   * run3: 1 16 19
+   * run4: 3 18
    */
   private List<TempTable> splitIntoRuns(Scan src) {
     List<TempTable> temps = new ArrayList<>();

@@ -528,6 +528,8 @@
 
 ## 14.2. Hashjoin
 
+![](14-hashjoin.drawio.svg)
+
 ## 14.3. Compare Join Algorithms
 
 ## 14.4. Multibuffer Sorting (Optional)
