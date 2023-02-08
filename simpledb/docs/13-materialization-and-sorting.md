@@ -1199,3 +1199,15 @@
           return p1.preprocessingCost() + p2.preprocessingCost();
         }
         ```
+
+## Exercise 13.10. Construct initial runs with one-block long (ToDo)
+
+Ref **Fig. 13.6.** in *13.4.3. Improving the Mergesort Algorithem*
+
+Repeat until there are no more input records:
+1. Read a block's worth of input records into a new temporary table.
+1. Sort those records using an in-memory sorting algorithm.
+1. Save the one-block temporary table to disk.
+
+- https://favtutor.com/blogs/sorting-algorithms-java
+- https://en.wikipedia.org/wiki/Heapsort

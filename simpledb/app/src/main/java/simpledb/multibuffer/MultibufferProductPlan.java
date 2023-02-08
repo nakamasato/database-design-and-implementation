@@ -82,6 +82,7 @@ public class MultibufferProductPlan implements Plan {
   }
 
   /*
+   * Ref: 14.6.
    * 1. Materialize LHS (MaterializePlan)
    * 2. Read and write RHS (copyRecordsFrom)
    */
