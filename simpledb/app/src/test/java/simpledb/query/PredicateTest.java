@@ -26,6 +26,7 @@ public class PredicateTest {
     Predicate pred = new Predicate(t);
     Predicate selectpred = pred.selectSubPred(sch);
     assertNotNull(selectpred);
+    assertEquals("fld1=fld2", selectpred.toString());
     assertEquals("fld2", selectpred.equatesWithField("fld1"));
   }
 
@@ -41,6 +42,22 @@ public class PredicateTest {
     Predicate pred = new Predicate(t);
     Predicate selectpred = pred.selectSubPred(sch);
     assertNull(selectpred);
+  }
+
+  /*
+   * Term: Schema.fld1 = Constant
+   * selectSubPred(): null
+   */
+  @Test
+  public void testSelectSubPredFalseIfCompareFieldInSchemaWithConstant() {
+    Schema sch = new Schema();
+    sch.addIntField("fld1");
+    Term t = new Term(new Expression("fld1"), new Expression(new Constant("val")));
+    Predicate pred = new Predicate(t);
+    Predicate selectpred = pred.selectSubPred(sch);
+    assertNotNull(selectpred);
+    assertEquals("fld1=val", selectpred.toString());
+    assertEquals(new Constant("val"), selectpred.equatesWithConstant("fld1"));
   }
 
   /*
@@ -71,6 +88,8 @@ public class PredicateTest {
     Predicate pred = new Predicate(t);
     Predicate joinpred = pred.joinSubPred(sch1, sch2);
     assertNotNull(joinpred);
+    assertEquals("fld1=fld2", joinpred.toString());
+    assertEquals("fld2", joinpred.equatesWithField("fld1"));
   }
 
   /*
