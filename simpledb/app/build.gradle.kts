@@ -9,6 +9,8 @@
 plugins {
     // Apply the application plugin to add support for building a CLI application in Java.
     application
+
+    id("jacoco")
 }
 
 repositories {
@@ -42,18 +44,18 @@ tasks.named<Test>("test") {
 
 task("startServer", JavaExec::class) {
     group = "jdbc"
-    main = "simpledb.server.StartServer"
+    mainClass.value("simpledb.server.StartServer")
     classpath = sourceSets["main"].runtimeClasspath
 }
 
 task("networkclient", JavaExec::class) {
     group = "jdbc"
-    main = "simpledb.client.network.JdbcNetworkDriverExample"
+    mainClass.value("simpledb.client.network.JdbcNetworkDriverExample")
     classpath = sourceSets["main"].runtimeClasspath
 }
 
 task("embeddedclient", JavaExec::class) {
     group = "jdbc"
-    main = "simpledb.client.network.JdbcEmbeddedDriverExample"
+    mainClass.value("simpledb.client.network.JdbcEmbeddedDriverExample")
     classpath = sourceSets["main"].runtimeClasspath
 }
