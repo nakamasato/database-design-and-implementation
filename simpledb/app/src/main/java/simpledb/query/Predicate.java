@@ -5,6 +5,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import simpledb.plan.Plan;
+import simpledb.record.Schema;
 
 /*
  * Predicate is a Boolean combination of terms.
@@ -69,7 +70,7 @@ public class Predicate {
    * where F is the specified field and c is some constant.
    * If true, return the constant, otherwise return null.
    */
-  public Object equatesWithConstant(String fldname) {
+  public Constant equatesWithConstant(String fldname) {
     for (Term t : terms) {
       Constant c = t.equatesWithConstant(fldname);
       if (c != null)
@@ -90,5 +91,40 @@ public class Predicate {
         return s;
     }
     return null;
+  }
+
+  /*
+   * Return the subpredicate that applies to the specified schema.
+   */
+  public Predicate selectSubPred(Schema sch) {
+    Predicate result = new Predicate();
+    for (Term t : terms)
+      if (t.appliesTo(sch))
+        result.terms.add(t);
+    if (result.terms.isEmpty())
+      return null;
+    else
+      return result;
+  }
+
+  /*
+   * Return the subpredicate consisting of terms that apply
+   * to the union of the two specified schemas,
+   * but not either schema separately.
+   * rhs and lhs are applied to sch1 and sch2.
+   * e.g. sch1.fld1 = sch2.fld1
+   */
+  public Predicate joinSubPred(Schema sch1, Schema sch2) {
+    Predicate result = new Predicate();
+    Schema newsch = new Schema();
+    newsch.addAll(sch1);
+    newsch.addAll(sch2);
+    for (Term t : terms)
+      if (!t.appliesTo(sch1) && !t.appliesTo(sch2) && t.appliesTo(newsch))
+        result.terms.add(t);
+    if (result.terms.isEmpty())
+      return null;
+    else
+      return result;
   }
 }
