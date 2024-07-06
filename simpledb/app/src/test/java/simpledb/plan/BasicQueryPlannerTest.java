@@ -3,16 +3,14 @@ package simpledb.plan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
-
 import java.util.Arrays;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import simpledb.metadata.MetadataMgr;
 import simpledb.metadata.StatInfo;
+import simpledb.parse.Parser;
 import simpledb.parse.QueryData;
 import simpledb.query.Constant;
 import simpledb.query.Expression;
@@ -28,8 +26,8 @@ public class BasicQueryPlannerTest {
   private MetadataMgr mdm;
 
   /*
-   * Test case of SQL: select fld1 from tbl1 where fld1 = 1
-   * ProjectPlan(SelectPlan(TablePlan(tx, "tbl1", mdm), pred), fields)
+   * Test case of SQL: select fld1 from tbl1 where fld1 = 1 ProjectPlan(SelectPlan(TablePlan(tx,
+   * "tbl1", mdm), pred), fields)
    */
   @Test
   public void testSingleTable() {
@@ -60,8 +58,8 @@ public class BasicQueryPlannerTest {
 
   /*
    * Test case of SQL: select fld1 from tbl1, tbl2 where fld1 = fld2
-   * ProjectPlan(SelectPlan(Product(TablePlan(tx, "tbl1", mdm), TablePlan(tx,
-   * "tbl2", mdm)), pred), fields)
+   * ProjectPlan(SelectPlan(Product(TablePlan(tx, "tbl1", mdm), TablePlan(tx, "tbl2", mdm)), pred),
+   * fields)
    */
   @Test
   public void testMultipleTables() {
@@ -83,12 +81,14 @@ public class BasicQueryPlannerTest {
     BasicQueryPlanner basicQueryPlanner = new BasicQueryPlanner(mdm);
     Term term = new Term(new Expression("fld1"), new Expression("fld2"));
     Predicate pred = new Predicate(term);
-    QueryData qd = new QueryData(Arrays.asList("fld1", "fld2"), Arrays.asList("tbl1", "tbl2"), pred);
+    QueryData qd =
+        new QueryData(Arrays.asList("fld1", "fld2"), Arrays.asList("tbl1", "tbl2"), pred);
     Plan plan = basicQueryPlanner.createPlan(qd, null);
 
     assertTrue(plan instanceof ProjectPlan);
     assertEquals(2, plan.schema().fields().size()); // fld1, fld2
-    assertEquals(3010, plan.blockAccessed()); // ProductPlan.blockaccessed() = B(t1) + R(t1) * B(t2) = 10 + 100 * 30
+    assertEquals(3010, plan.blockAccessed()); // ProductPlan.blockaccessed() = B(t1) + R(t1) * B(t2)
+                                              // = 10 + 100 * 30
 
     assertEquals(2647, plan.recordsOutput());
     // R(ProductPlan) / pred.reductionFactor(productplan)
@@ -102,5 +102,70 @@ public class BasicQueryPlannerTest {
     int minDistinctVal = Math.min(si2.distinctValues("fld2"), si1.distinctValues("fld1"));
     assertEquals(minDistinctVal, plan.distinctValues("fld1"));
     assertEquals(minDistinctVal, plan.distinctValues("fld2"));
+  }
+
+  /*
+   * Chapter 15.2. Test case of SQL: select Grade from STUDENT, SECTION, ENROLL where SId=StudentId
+   * and SectId=SectionId and SName='joe' and YearOffered=2020
+   */
+  @Test
+  public void test() {
+    Schema studentSch = new Schema();
+    studentSch.addIntField("Sid");
+    studentSch.addStringField("SName", 10);
+    studentSch.addIntField("MajorId");
+    studentSch.addIntField("GradYear");
+    Layout studentLayout = new Layout(studentSch);
+
+    Schema enrollSch = new Schema();
+    enrollSch.addIntField("Eid");
+    enrollSch.addIntField("StudentId");
+    enrollSch.addIntField("SectionId");
+    enrollSch.addIntField("grade");
+    Layout enrollLayout = new Layout(enrollSch);
+
+    Schema sectionSch = new Schema();
+    sectionSch.addIntField("SectId");
+    sectionSch.addIntField("CourseId");
+    sectionSch.addStringField("Prof", 8);
+    sectionSch.addIntField("Year");
+    Layout sectionLayout = new Layout(sectionSch);
+
+    Parser parser = new Parser(
+        "select Grade from Student, Section, Enroll where Sid=StudentId and SectId=Sectionid and SName='joe' and Year=2020");
+    QueryData data = parser.query();
+
+    StatInfo studentStatInfo = new StatInfo(4500, 45000);
+    when(mdm.getViewDef("student", null)).thenReturn(null);
+    when(mdm.getLayout("student", null)).thenReturn(studentLayout);
+    when(mdm.getStatInfo("student", studentLayout, null)).thenReturn(studentStatInfo);
+
+    StatInfo enrollStatInfo = new StatInfo(50000, 1500000);
+    when(mdm.getViewDef("enroll", null)).thenReturn(null);
+    when(mdm.getLayout("enroll", null)).thenReturn(enrollLayout);
+    when(mdm.getStatInfo("enroll", enrollLayout, null)).thenReturn(enrollStatInfo);
+
+    StatInfo sectionStatInfo = new StatInfo(2500, 25000);
+    when(mdm.getViewDef("section", null)).thenReturn(null);
+    when(mdm.getLayout("section", null)).thenReturn(sectionLayout);
+    when(mdm.getStatInfo("section", sectionLayout, null)).thenReturn(sectionStatInfo);
+
+    BasicQueryPlanner basicQueryPlanner = new BasicQueryPlanner(mdm);
+    Plan plan = basicQueryPlanner.createPlan(data, null);
+
+    TablePlan tp = new TablePlan(null, "student", mdm);
+    assertEquals(4500, tp.blockAccessed());
+
+    tp = new TablePlan(null, "enroll", mdm);
+    assertEquals(50000, tp.blockAccessed());
+
+    tp = new TablePlan(null, "section", mdm);
+    assertEquals(2500, tp.blockAccessed());
+
+    assertTrue(plan instanceof ProjectPlan);
+    assertEquals(1, plan.schema().fields().size()); // grade
+    assertEquals(-1074171212, plan.blockAccessed()); // TODO: how to calculate
+    // p1.blockAccessed() + p1.recordsOutput() * p2.blockAccessed();
+    assertEquals(3, plan.recordsOutput()); // TODO: how to calculate
   }
 }

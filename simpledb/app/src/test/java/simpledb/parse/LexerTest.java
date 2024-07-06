@@ -32,4 +32,17 @@ public class LexerTest {
     assertEquals(10, x);
     assertEquals("a", y);
   }
+
+  @Test
+  public void testLowerCaseMode() {
+    String s = "10 = A";
+    Lexer lex = new Lexer(s);
+
+    assertFalse(lex.matchId());
+    int x = lex.eatIntConstant();
+    lex.eatDelim('=');
+    String y = lex.eatId();
+    assertEquals(10, x);
+    assertEquals("a", y);
+  }
 }
