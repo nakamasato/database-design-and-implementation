@@ -1,4 +1,4 @@
-# Database Design and Implementation
+# [Database Design and Implementation](https://simpledb-java.netlify.app/database-design-and-implementation.pdf)
 
 ## SimpleDB Implementation
 
@@ -22,7 +22,7 @@
 1. [Chapter 12: Indexing](simpledb/docs/12-indexing.md)
 1. [Chapter 13: Materialization and Sorting](simpledb/docs/13-materialization-and-sorting.md)
 1. [Chpater 14: Effective Buffer Utilization](simpledb/docs/14-effective-buffer-utilization.md)
-1. Chapter 15: Query Optimization
+1. [Chapter 15: Query Optimization](simpledb/docs/15-query-optimization.md)
 
 
 ## Other

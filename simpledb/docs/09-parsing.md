@@ -180,6 +180,19 @@
         assertEquals("a", y);
       }
     }
+
+    @Test
+    public void testLowerCaseMode() {
+      String s = "10 = A"; // upper case
+      Lexer lex = new Lexer(s);
+
+      assertFalse(lex.matchId());
+      int x = lex.eatIntConstant();
+      lex.eatDelim('=');
+      String y = lex.eatId();
+      assertEquals(10, x);
+      assertEquals("a", y); // lower case
+    }
     ```
 
 ### 9.2. Parser 1: Methods for parsing predicates, terms, expressions, constants, and fields
