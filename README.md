@@ -30,3 +30,7 @@
 1. [Derby Database System](docs/01-database-systems/02-derbydatabase-system)
 1. [SimpleDB](docs/01-database-systems/04-simpledb/README.md)
 1. [RMI](rmi/README.md)
+
+## References
+
+1. [簡易DBをフルスクラッチで実装して得た学び](https://zenn.dev/kj455/articles/1f058302e6b528)
